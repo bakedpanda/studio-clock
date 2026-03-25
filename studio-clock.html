@@ -186,10 +186,17 @@
   .conn-dot.connected   { background: #00e676; }
   .conn-dot.error       { background: #ff1744; }
 
-  /* ── Fullscreen button ── */
-  #fsBtn {
+  /* ── Top-right buttons ── */
+  .top-right {
     position: fixed;
     top: 12px; right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  /* ── Fullscreen button ── */
+  #fsBtn {
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 6px;
@@ -198,11 +205,29 @@
     padding: 8px;
     line-height: 0;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
-    z-index: 10;
     -webkit-tap-highlight-color: transparent;
   }
   #fsBtn:hover { color: #fff; border-color: #555; background: #252525; }
   #fsBtn svg { width: 18px; height: 18px; }
+
+  #operatorBtn {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #555;
+    cursor: pointer;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #operatorBtn:hover { color: #fff; border-color: #555; background: #252525; }
 
   /* ── Viewer mode — hide controls, keep display ── */
   body.viewer .timer-controls,
@@ -232,12 +257,15 @@
 </head>
 <body>
 
-<button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
-  <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-  </svg>
-</button>
+<div class="top-right">
+  <a id="operatorBtn" href="/operator" title="Operator view">Operator</a>
+  <button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+    <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+    </svg>
+  </button>
+</div>
 
 <div class="clock-wrapper">
   <canvas id="clock" width="480" height="480"></canvas>
@@ -250,7 +278,7 @@
 
 <div class="timer-panel">
   <div class="timer-label">
-    <span class="conn-dot" id="connDot"></span>Half-time Timer
+    <span class="conn-dot" id="connDot"></span>Timer
   </div>
   <div class="timer-display idle" id="timerDisplay">15:00</div>
   <div class="timer-controls">
