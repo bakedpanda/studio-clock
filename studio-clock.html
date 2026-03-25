@@ -276,8 +276,8 @@
 <body>
 
 <div class="top-right">
-  <a id="operatorBtn" href="/operator" title="Operator view">Operator</a>
-  <a id="viewerBtn" href="/" title="Viewer view">Viewer</a>
+  <a id="operatorBtn" href="operator" title="Operator view">Operator</a>
+  <a id="viewerBtn" href="." title="Viewer view">Viewer</a>
   <button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
     <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
@@ -316,6 +316,11 @@
 </div>
 
 <script>
+  // ── Base path detection (works standalone and behind a reverse proxy) ──
+  const knownRoutes = ['', 'operator'];
+  const firstSegment = location.pathname.split('/')[1] || '';
+  const BASE = knownRoutes.includes(firstSegment) ? '/' : `/${firstSegment}/`;
+
   // ── Time Sync ──────────────────────────────────────────────────────────
   let timeOffset = 0;
   let synced = false;
@@ -326,7 +331,7 @@
     const indicator = document.getElementById('syncIndicator');
     try {
       const t0 = Date.now();
-      const data = await fetch('/time', { cache: 'no-store' }).then(r => r.json());
+      const data = await fetch(BASE + 'time', { cache: 'no-store' }).then(r => r.json());
       const latency = (Date.now() - t0) / 2;
       timeOffset = data.ts + latency - Date.now();
       synced = true;
@@ -460,7 +465,7 @@
       body.mins = parseInt(document.getElementById('durationMins').value) || 0;
       body.secs = parseInt(document.getElementById('durationSecs').value) || 0;
     }
-    await fetch(`/timer/${cmd}`, {
+    await fetch(BASE + `timer/${cmd}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -471,7 +476,7 @@
   // SSE connection
   function connectSSE() {
     const dot = document.getElementById('connDot');
-    const es  = new EventSource('/events');
+    const es  = new EventSource(BASE + 'events');
 
     es.onopen = () => { dot.className = 'conn-dot connected'; };
 
