@@ -227,7 +227,25 @@
     transition: color 0.15s, border-color 0.15s, background 0.15s;
     -webkit-tap-highlight-color: transparent;
   }
-  #operatorBtn:hover { color: #fff; border-color: #555; background: #252525; }
+  #operatorBtn:hover, #viewerBtn:hover { color: #fff; border-color: #555; background: #252525; }
+
+  #viewerBtn {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #555;
+    cursor: pointer;
+    padding: 8px 12px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
 
   /* ── Viewer mode — hide controls, keep display ── */
   body.viewer .timer-controls,
@@ -259,6 +277,7 @@
 
 <div class="top-right">
   <a id="operatorBtn" href="/operator" title="Operator view">Operator</a>
+  <a id="viewerBtn" href="/" title="Viewer view">Viewer</a>
   <button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
     <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
