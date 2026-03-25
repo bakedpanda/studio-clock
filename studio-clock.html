@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Studio Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* --clock-size drives all proportional sizing */
+  :root { --clock-size: min(480px, 92vw); }
+
+  html, body { height: 100%; }
+
+  body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'Roboto Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 16px;
+    gap: 20px;
+    user-select: none;
+    overflow-y: auto;
+  }
+
+  /* ── Clock ── */
+  .clock-wrapper {
+    position: relative;
+    width: var(--clock-size);
+    height: var(--clock-size);
+    flex-shrink: 0;
+  }
+
+  canvas#clock {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;   /* CSS scale — canvas attrs stay 480x480 for quality */
+    height: 100%;
+  }
+
+  .clock-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    width: 70%;
+  }
+
+  .time-display {
+    font-size: calc(var(--clock-size) * 0.108);
+    font-weight: bold;
+    letter-spacing: 0.07em;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(255,255,255,0.3);
+    white-space: nowrap;
+  }
+
+  .date-display {
+    font-size: calc(var(--clock-size) * 0.027);
+    color: #666;
+    letter-spacing: 0.15em;
+    margin-top: 0.4em;
+    text-transform: uppercase;
+  }
+
+  .sync-indicator {
+    font-size: calc(var(--clock-size) * 0.021);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 0.6em;
+    opacity: 0.5;
+  }
+  .sync-indicator.synced  { color: #00e676; }
+  .sync-indicator.syncing { color: #ffb300; }
+  .sync-indicator.error   { color: #ff1744; }
+
+  /* ── Timer panel ── */
+  .timer-panel {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 20px 24px;
+    width: var(--clock-size);
+    flex-shrink: 0;
+  }
+
+  .timer-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .timer-display {
+    font-size: clamp(40px, calc(var(--clock-size) * 0.133), 64px);
+    font-weight: bold;
+    letter-spacing: 0.06em;
+    text-align: center;
+    margin-bottom: 16px;
+    transition: color 0.3s;
+  }
+
+  .timer-display.running { color: #00e676; }
+  .timer-display.paused  { color: #ffb300; }
+  .timer-display.expired { color: #ff1744; animation: blink 1s step-end infinite; }
+  .timer-display.idle    { color: #444; }
+
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .timer-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    background: #1a1a1a;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    min-width: 80px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:hover  { background: #252525; border-color: #555; color: #fff; }
+  button:active { opacity: 0.7; }
+
+  button.primary   { background: #003d20; border-color: #00e676; color: #00e676; }
+  button.primary:hover { background: #005a2e; }
+
+  button.stop-btn  { background: #3d0000; border-color: #ff1744; color: #ff1744; }
+  button.stop-btn:hover { background: #5a0000; }
+
+  .config-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .config-row label { font-size: 11px; letter-spacing: 2px; color: #555; text-transform: uppercase; }
+
+  .config-row input {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #fff;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 16px; /* 16px prevents iOS zoom on focus */
+    padding: 8px 10px;
+    width: 64px;
+    text-align: center;
+  }
+
+  .config-row input:focus { outline: none; border-color: #555; }
+  .config-row span { color: #444; font-size: 12px; }
+
+  .conn-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: #444;
+    transition: background 0.3s;
+  }
+  .conn-dot.connected   { background: #00e676; }
+  .conn-dot.error       { background: #ff1744; }
+
+  /* ── Fullscreen button ── */
+  #fsBtn {
+    position: fixed;
+    top: 12px; right: 12px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #555;
+    cursor: pointer;
+    padding: 8px;
+    line-height: 0;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    z-index: 10;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #fsBtn:hover { color: #fff; border-color: #555; background: #252525; }
+  #fsBtn svg { width: 18px; height: 18px; }
+
+  /* ── Viewer mode — hide controls, keep display ── */
+  body.viewer .timer-controls,
+  body.viewer .config-row { display: none !important; }
+
+  body.viewer .timer-panel {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  /* ── Landscape on short screens — side by side ── */
+  @media (orientation: landscape) and (max-height: 540px) {
+    :root { --clock-size: min(480px, min(88vh, 46vw)); }
+
+    body {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      gap: 16px;
+      overflow-y: hidden;
+    }
+
+    .timer-panel { width: min(480px, 46vw); }
+  }
+</style>
+</head>
+<body>
+
+<button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+  <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+  </svg>
+</button>
+
+<div class="clock-wrapper">
+  <canvas id="clock" width="480" height="480"></canvas>
+  <div class="clock-center">
+    <div class="time-display" id="timeDisplay">00:00:00</div>
+    <div class="date-display" id="dateDisplay"></div>
+    <div class="sync-indicator syncing" id="syncIndicator">syncing...</div>
+  </div>
+</div>
+
+<div class="timer-panel">
+  <div class="timer-label">
+    <span class="conn-dot" id="connDot"></span>Half-time Timer
+  </div>
+  <div class="timer-display idle" id="timerDisplay">15:00</div>
+  <div class="timer-controls">
+    <button class="primary" id="startBtn"  onclick="timerCmd('start')">Start</button>
+    <button               id="pauseBtn"  onclick="timerCmd('pause')"  style="display:none">Pause</button>
+    <button               id="resumeBtn" onclick="timerCmd('resume')" style="display:none">Resume</button>
+    <button class="stop-btn" id="resetBtn" onclick="timerCmd('reset')"  style="display:none">Reset</button>
+  </div>
+  <div class="config-row">
+    <label>Duration</label>
+    <input type="number" id="durationMins" value="15" min="0" max="99">
+    <span>min</span>
+    <input type="number" id="durationSecs" value="0"  min="0" max="59">
+    <span>sec</span>
+  </div>
+</div>
+
+<script>
+  // ── Time Sync ──────────────────────────────────────────────────────────
+  let timeOffset = 0;
+  let synced = false;
+
+  function serverNow() { return new Date(Date.now() + timeOffset); }
+
+  async function syncTime() {
+    const indicator = document.getElementById('syncIndicator');
+    try {
+      const t0 = Date.now();
+      const data = await fetch('/time', { cache: 'no-store' }).then(r => r.json());
+      const latency = (Date.now() - t0) / 2;
+      timeOffset = data.ts + latency - Date.now();
+      synced = true;
+      const src = data.ntpSynced ? 'ntp' : 'system clock';
+      indicator.textContent = `${src} · ±${Math.round(latency)}ms`;
+      indicator.className = 'sync-indicator synced';
+    } catch {
+      indicator.textContent = synced ? 'sync lost · local time' : 'no sync · local time';
+      indicator.className = 'sync-indicator error';
+    }
+  }
+
+  // Viewer vs operator mode
+  const isOperator = location.pathname === '/operator';
+  if (!isOperator) document.body.classList.add('viewer');
+
+  syncTime();
+  setInterval(syncTime, 30000);
+
+  // ── Clock ──────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('clock');
+  const ctx = canvas.getContext('2d');
+  const cx = 240, cy = 240, r = 230;
+  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function drawClock() {
+    const now = serverNow();
+    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+
+    ctx.clearRect(0, 0, 480, 480);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      const isFive    = i % 5 === 0;
+      const isActive  = i < s;
+      const isCurrent = i === s;
+      const inner = isFive ? r - 28 : r - 18;
+      const segStart = angle - (Math.PI * 2 / 60) * 0.42;
+      const segEnd   = angle + (Math.PI * 2 / 60) * 0.42;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 4, segStart, segEnd);
+      ctx.arc(cx, cy, inner, segEnd, segStart, true);
+      ctx.closePath();
+      ctx.fillStyle = isCurrent ? '#ffffff'
+                    : isActive  ? (isFive ? '#00c853' : '#00e676')
+                                : (isFive ? '#1e1e1e' : '#161616');
+      ctx.fill();
+    }
+
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle) * (r - 38), cy + Math.sin(angle) * (r - 38));
+      ctx.lineTo(cx + Math.cos(angle) * (r - 50), cy + Math.sin(angle) * (r - 50));
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 56, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fill();
+
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('timeDisplay').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    document.getElementById('dateDisplay').textContent =
+      `${DAYS[now.getDay()]}  ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  }
+
+  setInterval(drawClock, 100);
+  drawClock();
+
+  // ── Shared Timer (server-driven via SSE) ──────────────────────────────
+  // Server owns all state. Clients receive updates via /events and send
+  // commands via POST. Between server updates, running timers count down
+  // locally using the received remaining value + local clock.
+
+  let timerState = 'idle';
+  let timerLocalEndAt = null;   // local Date.now() target when running
+  let timerRemaining = 15 * 60 * 1000; // used when not running
+
+  function formatMs(ms) {
+    if (ms < 0) ms = 0;
+    const total = Math.ceil(ms / 1000);
+    return `${String(Math.floor(total / 60)).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`;
+  }
+
+  function applyState({ state, remaining }) {
+    timerState = state;
+    if (state === 'running') {
+      timerLocalEndAt = Date.now() + remaining;
+    } else {
+      timerLocalEndAt = null;
+      timerRemaining = remaining;
+    }
+    renderTimer();
+    showButtons(state);
+  }
+
+  function renderTimer() {
+    const ms = timerState === 'running'
+      ? Math.max(0, timerLocalEndAt - Date.now())
+      : timerRemaining;
+    const el = document.getElementById('timerDisplay');
+    el.textContent = formatMs(ms);
+    el.className = 'timer-display ' + timerState;
+  }
+
+  setInterval(renderTimer, 100);
+
+  function showButtons(state) {
+    document.getElementById('startBtn').style.display  = state === 'idle' || state === 'expired' ? '' : 'none';
+    document.getElementById('pauseBtn').style.display  = state === 'running' ? '' : 'none';
+    document.getElementById('resumeBtn').style.display = state === 'paused'  ? '' : 'none';
+    document.getElementById('resetBtn').style.display  = state !== 'idle'    ? '' : 'none';
+    document.getElementById('startBtn').textContent    = state === 'expired' ? 'Restart' : 'Start';
+  }
+
+  async function timerCmd(cmd) {
+    const body = {};
+    if (cmd === 'start' || cmd === 'reset') {
+      body.mins = parseInt(document.getElementById('durationMins').value) || 0;
+      body.secs = parseInt(document.getElementById('durationSecs').value) || 0;
+    }
+    await fetch(`/timer/${cmd}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    // State update arrives via SSE — no need to update locally
+  }
+
+  // SSE connection
+  function connectSSE() {
+    const dot = document.getElementById('connDot');
+    const es  = new EventSource('/events');
+
+    es.onopen = () => { dot.className = 'conn-dot connected'; };
+
+    es.onmessage = e => {
+      try { applyState(JSON.parse(e.data)); }
+      catch {}
+    };
+
+    es.onerror = () => {
+      dot.className = 'conn-dot error';
+      es.close();
+      setTimeout(connectSSE, 3000); // reconnect
+    };
+  }
+
+  connectSSE();
+
+  // ── Fullscreen ────────────────────────────────────────────────────────
+  const ICON_EXPAND = `<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>`;
+  const ICON_SHRINK = `<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>`;
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    document.getElementById('fsIcon').innerHTML =
+      document.fullscreenElement ? ICON_SHRINK : ICON_EXPAND;
+  });
+</script>
+</body>
+</html>

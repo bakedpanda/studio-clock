@@ -1,0 +1,8 @@
+version: "2"
+services:
+  studio-clock:
+    build: .
+    container_name: studio-clock
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
