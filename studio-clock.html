@@ -317,9 +317,16 @@
 
 <script>
   // ── Base path detection (works standalone and behind a reverse proxy) ──
-  const knownRoutes = ['', 'operator'];
-  const firstSegment = location.pathname.split('/')[1] || '';
-  const BASE = knownRoutes.includes(firstSegment) ? '/' : `/${firstSegment}/`;
+  // Strip the last path segment to get the base, then ensure trailing slash.
+  // e.g. /studio-clock/  => /studio-clock/
+  //      /studio-clock/operator => /studio-clock/
+  //      /  => /
+  //      /operator => /
+  const lastSegment = location.pathname.split('/').filter(Boolean).pop() || '';
+  const knownRoutes = ['operator'];
+  const BASE = knownRoutes.includes(lastSegment)
+    ? location.pathname.slice(0, location.pathname.lastIndexOf(lastSegment))
+    : (location.pathname.endsWith('/') ? location.pathname : location.pathname + '/');
 
   // ── Time Sync ──────────────────────────────────────────────────────────
   let timeOffset = 0;
@@ -344,8 +351,8 @@
     }
   }
 
-  // Viewer vs operator mode
-  const isOperator = location.pathname === '/operator';
+  // Viewer vs operator mode — works at /operator and /studio-clock/operator
+  const isOperator = location.pathname.split('/').filter(Boolean).pop() === 'operator';
   if (!isOperator) document.body.classList.add('viewer');
 
   syncTime();
