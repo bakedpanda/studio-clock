@@ -436,6 +436,10 @@
     .then(({ mins, secs }) => {
       document.getElementById('durationMins').value = mins;
       document.getElementById('durationSecs').value = secs;
+      if (timerState === 'idle') {
+        timerRemaining = (mins * 60 + secs) * 1000;
+        renderTimer();
+      }
     })
     .catch(() => {});
 
@@ -447,6 +451,10 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mins, secs }),
     });
+    if (timerState === 'idle') {
+      timerRemaining = (mins * 60 + secs) * 1000;
+      renderTimer();
+    }
     const btn = document.getElementById('saveBtn');
     btn.textContent = 'Saved';
     setTimeout(() => { btn.textContent = 'Save'; }, 1500);
