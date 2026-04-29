@@ -101,7 +101,13 @@ function snapshot() {
   return { state: timer.state, remaining };
 }
 
-// Server-side expiry check
+// Server-side expiry check — auto-resets to idle after 30 s of pulsing
+let expiredTimeout = null;
+
+function clearExpiredTimeout() {
+  if (expiredTimeout) { clearTimeout(expiredTimeout); expiredTimeout = null; }
+}
+
 setInterval(() => {
   if (timer.state !== 'running') return;
   if (Date.now() >= timer.endAt) {
@@ -109,6 +115,11 @@ setInterval(() => {
     timer.remaining = 0;
     timer.endAt = null;
     broadcast(snapshot());
+    expiredTimeout = setTimeout(() => {
+      timer = { state: 'idle', remaining: 0, endAt: null };
+      expiredTimeout = null;
+      broadcast(snapshot());
+    }, 30000);
   }
 }, 250);
 
@@ -170,6 +181,7 @@ const server = http.createServer((req, res) => {
       const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
       const duration = (mins * 60 + secs) * 1000;
       if (duration > 0) {
+        clearExpiredTimeout();
         timer = { state: 'running', remaining: duration, endAt: Date.now() + duration };
         broadcast(snapshot());
       }
@@ -200,6 +212,7 @@ const server = http.createServer((req, res) => {
     return parseBody(req, body => {
       const mins = Math.max(0, parseInt(body.mins) || 0);
       const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
+      clearExpiredTimeout();
       timer = { state: 'idle', remaining: (mins * 60 + secs) * 1000, endAt: null };
       broadcast(snapshot());
       noContent(res);
