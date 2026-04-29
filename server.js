@@ -72,9 +72,20 @@ setInterval(syncNTP, SYNC_INTERVAL_MS);
 // ── Shared timer state ────────────────────────────────────────────────────
 let timer = {
   state: 'idle',      // idle | running | paused | expired
-  remaining: 15 * 60 * 1000,
+  remaining: 0,
   endAt: null,
 };
+
+// Last duration set by the operator — shared across devices, expires after 12h
+const DURATION_TTL = 12 * 60 * 60 * 1000;
+let lastDuration = { mins: 0, secs: 0, savedAt: 0 };
+
+function savedDuration() {
+  if (!lastDuration.savedAt || Date.now() - lastDuration.savedAt > DURATION_TTL) {
+    return { mins: 0, secs: 0 };
+  }
+  return { mins: lastDuration.mins, secs: lastDuration.secs };
+}
 
 let sseClients = [];
 
@@ -116,6 +127,21 @@ function noContent(res) { res.writeHead(204); res.end(); }
 // ── Server ────────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+
+  // Last operator-set duration (shared across devices, expires after 12h)
+  if (req.method === 'GET' && req.url === '/timer/duration') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify(savedDuration()));
+  }
+
+  if (req.method === 'POST' && req.url === '/timer/duration') {
+    return parseBody(req, body => {
+      const mins = Math.max(0, parseInt(body.mins) || 0);
+      const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
+      lastDuration = { mins, secs, savedAt: Date.now() };
+      noContent(res);
+    });
+  }
 
   // Current server time for clock sync (NTP-corrected)
   if (req.method === 'GET' && req.url === '/time') {
@@ -172,7 +198,7 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && req.url === '/timer/reset') {
     return parseBody(req, body => {
-      const mins = Math.max(0, parseInt(body.mins) || 15);
+      const mins = Math.max(0, parseInt(body.mins) || 0);
       const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
       timer = { state: 'idle', remaining: (mins * 60 + secs) * 1000, endAt: null };
       broadcast(snapshot());

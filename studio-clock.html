@@ -299,7 +299,7 @@
   <div class="timer-label">
     <span class="conn-dot" id="connDot"></span>Timer
   </div>
-  <div class="timer-display idle" id="timerDisplay">15:00</div>
+  <div class="timer-display idle" id="timerDisplay">00:00</div>
   <div class="timer-controls">
     <button class="primary" id="startBtn"  onclick="timerCmd('start')">Start</button>
     <button               id="pauseBtn"  onclick="timerCmd('pause')"  style="display:none">Pause</button>
@@ -308,10 +308,11 @@
   </div>
   <div class="config-row">
     <label>Duration</label>
-    <input type="number" id="durationMins" value="15" min="0" max="99">
+    <input type="number" id="durationMins" value="0" min="0" max="99">
     <span>min</span>
-    <input type="number" id="durationSecs" value="0"  min="0" max="59">
+    <input type="number" id="durationSecs" value="0" min="0" max="59">
     <span>sec</span>
+    <button id="saveBtn" onclick="saveDuration()">Save</button>
   </div>
 </div>
 
@@ -427,7 +428,29 @@
 
   let timerState = 'idle';
   let timerLocalEndAt = null;   // local Date.now() target when running
-  let timerRemaining = 15 * 60 * 1000; // used when not running
+  let timerRemaining = 0;       // used when not running
+
+  // ── Duration memory (server-side, expires after 12 hours) ────────────
+  fetch(BASE + 'timer/duration', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(({ mins, secs }) => {
+      document.getElementById('durationMins').value = mins;
+      document.getElementById('durationSecs').value = secs;
+    })
+    .catch(() => {});
+
+  async function saveDuration() {
+    const mins = parseInt(document.getElementById('durationMins').value) || 0;
+    const secs = parseInt(document.getElementById('durationSecs').value) || 0;
+    await fetch(BASE + 'timer/duration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mins, secs }),
+    });
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = 'Saved';
+    setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+  }
 
   function formatMs(ms) {
     if (ms < 0) ms = 0;
