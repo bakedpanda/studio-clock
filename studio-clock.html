@@ -306,7 +306,7 @@
 
     /* Viewer: no controls, so timer number can fill the lower circle */
     body.viewer .timer-panel {
-      top: 65%;
+      top: 55%;
       transform: translate(-50%, -50%);
       width: 70%;
     }
@@ -314,6 +314,12 @@
     body.viewer .timer-display {
       font-size: clamp(48px, calc(var(--clock-size) * 0.2), 240px);
       margin-bottom: 0;
+    }
+
+    /* Running timer in white so it stands out from the clock's green tick marks */
+    body.viewer .timer-display.running {
+      color: #ffffff;
+      text-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
     }
   }
 </style>
