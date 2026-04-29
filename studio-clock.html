@@ -397,20 +397,36 @@
   // ── Clock ──────────────────────────────────────────────────────────────
   const canvas = document.getElementById('clock');
   const ctx = canvas.getContext('2d');
-  const cx = 240, cy = 240, r = 230;
   const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+  // Resize canvas buffer to match rendered CSS size × device pixel ratio.
+  // Called each frame so it self-corrects on resize and fullscreen transitions.
+  function resizeCanvas() {
+    const dpr  = window.devicePixelRatio || 1;
+    const size = Math.round((canvas.getBoundingClientRect().width || 480) * dpr);
+    if (canvas.width !== size || canvas.height !== size) {
+      canvas.width  = size;
+      canvas.height = size;
+    }
+  }
+
   function drawClock() {
+    resizeCanvas();
+    const S  = canvas.width;           // physical pixels
+    const sc = S / 480;                // scale factor relative to original 480px design
+    const cx = S / 2, cy = S / 2;
+    const r  = 230 * sc;
+
     const now = serverNow();
     const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
 
-    ctx.clearRect(0, 0, 480, 480);
+    ctx.clearRect(0, 0, S, S);
 
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.strokeStyle = '#1a1a1a';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * sc;
     ctx.stroke();
 
     for (let i = 0; i < 60; i++) {
@@ -418,12 +434,12 @@
       const isFive    = i % 5 === 0;
       const isActive  = i < s;
       const isCurrent = i === s;
-      const inner = isFive ? r - 28 : r - 18;
+      const inner = isFive ? r - 28 * sc : r - 18 * sc;
       const segStart = angle - (Math.PI * 2 / 60) * 0.42;
       const segEnd   = angle + (Math.PI * 2 / 60) * 0.42;
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r - 4, segStart, segEnd);
+      ctx.arc(cx, cy, r - 4 * sc, segStart, segEnd);
       ctx.arc(cx, cy, inner, segEnd, segStart, true);
       ctx.closePath();
       ctx.fillStyle = isCurrent ? '#ffffff'
@@ -435,15 +451,15 @@
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
       ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(angle) * (r - 38), cy + Math.sin(angle) * (r - 38));
-      ctx.lineTo(cx + Math.cos(angle) * (r - 50), cy + Math.sin(angle) * (r - 50));
+      ctx.moveTo(cx + Math.cos(angle) * (r - 38 * sc), cy + Math.sin(angle) * (r - 38 * sc));
+      ctx.lineTo(cx + Math.cos(angle) * (r - 50 * sc), cy + Math.sin(angle) * (r - 50 * sc));
       ctx.strokeStyle = '#2a2a2a';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * sc;
       ctx.stroke();
     }
 
     ctx.beginPath();
-    ctx.arc(cx, cy, r - 56, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r - 56 * sc, 0, Math.PI * 2);
     ctx.fillStyle = '#0a0a0a';
     ctx.fill();
 
