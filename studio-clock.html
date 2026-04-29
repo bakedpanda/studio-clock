@@ -121,10 +121,10 @@
 
   .timer-display.running { color: #ffd600; }
   .timer-display.paused  { color: #ff1744; }
-  .timer-display.expired { color: #ff1744; animation: blink 0.5s step-end infinite; }
+  .timer-display.expired { color: #ff1744; animation: pulse 1s ease-in-out infinite; }
   .timer-display.idle    { color: #888; }
 
-  @keyframes blink { 50% { opacity: 0.2; } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
 
   .timer-controls {
     display: flex;
