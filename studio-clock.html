@@ -303,6 +303,18 @@
     .timer-display {
       font-size: clamp(32px, calc(var(--clock-size) * 0.085), 120px);
     }
+
+    /* Viewer: no controls, so timer number can fill the lower circle */
+    body.viewer .timer-panel {
+      top: 65%;
+      transform: translate(-50%, -50%);
+      width: 70%;
+    }
+
+    body.viewer .timer-display {
+      font-size: clamp(48px, calc(var(--clock-size) * 0.2), 240px);
+      margin-bottom: 0;
+    }
   }
 </style>
 </head>
