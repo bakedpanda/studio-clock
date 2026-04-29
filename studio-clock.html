@@ -256,20 +256,31 @@
     pointer-events: none;
   }
 
-  /* ── Landscape on short screens — side by side ── */
-  @media (orientation: landscape) and (max-height: 540px) {
-    :root { --clock-size: min(480px, min(88vh, 46vw)); }
+  /* ── Portrait on wider screens — allow bigger clock ── */
+  @media (orientation: portrait) and (min-width: 600px) {
+    :root { --clock-size: min(600px, 85vw); }
+  }
+
+  /* ── Landscape — side by side, scales to fill screen ── */
+  @media (orientation: landscape) {
+    :root { --clock-size: min(800px, calc(100vh - 40px), 50vw); }
 
     body {
       flex-direction: row;
       align-items: center;
       justify-content: center;
-      padding: 12px;
-      gap: 16px;
+      padding: 16px 20px;
+      gap: 20px;
       overflow-y: hidden;
     }
 
-    .timer-panel { width: min(480px, 46vw); }
+    .timer-panel {
+      width: clamp(260px, calc(100vw - var(--clock-size) - 56px), 480px);
+    }
+
+    .timer-display {
+      font-size: clamp(40px, calc(var(--clock-size) * 0.1), 96px);
+    }
   }
 </style>
 </head>
