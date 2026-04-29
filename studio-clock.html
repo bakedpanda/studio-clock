@@ -34,6 +34,16 @@
   .clock-wrapper {
     position: relative;
     width: var(--clock-size);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .clock-face {
+    position: relative;
+    width: var(--clock-size);
     height: var(--clock-size);
     flex-shrink: 0;
   }
@@ -261,25 +271,37 @@
     :root { --clock-size: min(600px, 85vw); }
   }
 
-  /* ── Landscape — side by side, scales to fill screen ── */
+  /* ── Landscape — clock fills screen, timer overlaid inside circle ── */
   @media (orientation: landscape) {
-    :root { --clock-size: min(800px, calc(100vh - 40px), 50vw); }
+    :root { --clock-size: min(96vh, 96vw); }
 
     body {
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      padding: 16px 20px;
-      gap: 20px;
-      overflow-y: hidden;
+      padding: 0;
+      gap: 0;
+      overflow: hidden;
     }
 
+    /* Shift time/date up into the top of the inner circle */
+    .clock-center { top: 36%; }
+
+    /* Timer panel floats over the lower half of the clock circle */
     .timer-panel {
-      width: clamp(260px, calc(100vw - var(--clock-size) - 56px), 480px);
+      position: absolute;
+      top: 53%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 58%;
+      background: transparent;
+      border: none;
+      padding: 0;
+      z-index: 5;
+      pointer-events: auto;
     }
+
+    .timer-label { display: none; }
 
     .timer-display {
-      font-size: clamp(40px, calc(var(--clock-size) * 0.1), 96px);
+      font-size: clamp(32px, calc(var(--clock-size) * 0.085), 120px);
     }
   }
 </style>
@@ -298,32 +320,34 @@
 </div>
 
 <div class="clock-wrapper">
-  <canvas id="clock" width="480" height="480"></canvas>
-  <div class="clock-center">
-    <div class="time-display" id="timeDisplay">00:00:00</div>
-    <div class="date-display" id="dateDisplay"></div>
-    <div class="sync-indicator syncing" id="syncIndicator">syncing...</div>
+  <div class="clock-face">
+    <canvas id="clock" width="480" height="480"></canvas>
+    <div class="clock-center">
+      <div class="time-display" id="timeDisplay">00:00:00</div>
+      <div class="date-display" id="dateDisplay"></div>
+      <div class="sync-indicator syncing" id="syncIndicator">syncing...</div>
+    </div>
   </div>
-</div>
 
-<div class="timer-panel">
-  <div class="timer-label">
-    <span class="conn-dot" id="connDot"></span>Timer
-  </div>
-  <div class="timer-display idle" id="timerDisplay">00:00</div>
-  <div class="timer-controls">
-    <button class="primary" id="startBtn"  onclick="timerCmd('start')">Start</button>
-    <button               id="pauseBtn"  onclick="timerCmd('pause')"  style="display:none">Pause</button>
-    <button               id="resumeBtn" onclick="timerCmd('resume')" style="display:none">Resume</button>
-    <button class="stop-btn" id="resetBtn" onclick="timerCmd('reset')"  style="display:none">Reset</button>
-  </div>
-  <div class="config-row">
-    <label>Duration</label>
-    <input type="number" id="durationMins" value="0" min="0" max="99">
-    <span>min</span>
-    <input type="number" id="durationSecs" value="0" min="0" max="59">
-    <span>sec</span>
-    <button id="saveBtn" onclick="saveDuration()">Save</button>
+  <div class="timer-panel">
+    <div class="timer-label">
+      <span class="conn-dot" id="connDot"></span>Timer
+    </div>
+    <div class="timer-display idle" id="timerDisplay">00:00</div>
+    <div class="timer-controls">
+      <button class="primary" id="startBtn"  onclick="timerCmd('start')">Start</button>
+      <button               id="pauseBtn"  onclick="timerCmd('pause')"  style="display:none">Pause</button>
+      <button               id="resumeBtn" onclick="timerCmd('resume')" style="display:none">Resume</button>
+      <button class="stop-btn" id="resetBtn" onclick="timerCmd('reset')"  style="display:none">Reset</button>
+    </div>
+    <div class="config-row">
+      <label>Duration</label>
+      <input type="number" id="durationMins" value="0" min="0" max="99">
+      <span>min</span>
+      <input type="number" id="durationSecs" value="0" min="0" max="59">
+      <span>sec</span>
+      <button id="saveBtn" onclick="saveDuration()">Save</button>
+    </div>
   </div>
 </div>
 
