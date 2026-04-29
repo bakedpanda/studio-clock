@@ -119,12 +119,12 @@
     transition: color 0.3s;
   }
 
-  .timer-display.running { color: #00e676; }
-  .timer-display.paused  { color: #ffb300; }
-  .timer-display.expired { color: #ff1744; animation: blink 1s step-end infinite; }
-  .timer-display.idle    { color: #444; }
+  .timer-display.running { color: #ffd600; }
+  .timer-display.paused  { color: #ff1744; }
+  .timer-display.expired { color: #ff1744; animation: blink 0.5s step-end infinite; }
+  .timer-display.idle    { color: #888; }
 
-  @keyframes blink { 50% { opacity: 0.3; } }
+  @keyframes blink { 50% { opacity: 0.2; } }
 
   .timer-controls {
     display: flex;
@@ -316,11 +316,6 @@
       margin-bottom: 0;
     }
 
-    /* Running timer in white so it stands out from the clock's green tick marks */
-    body.viewer .timer-display.running {
-      color: #ffffff;
-      text-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
-    }
   }
 </style>
 </head>
