@@ -62,6 +62,7 @@
     text-align: center;
     pointer-events: none;
     width: 70%;
+    transition: top 0.4s ease;
   }
 
   .time-display {
@@ -281,15 +282,17 @@
       overflow: hidden;
     }
 
-    /* Shift time/date up into the top of the inner circle */
-    .clock-center { top: 36%; }
+    /* Time/date sits in the upper portion of the inner circle.
+       Together with the timer at 62%, the whole group is centred
+       within the inner circle (≈13.75% – 86.25% of clock-size). */
+    .clock-center { top: 38%; }
 
-    /* Timer panel floats over the lower half of the clock circle */
+    /* Timer panel — centred on the 62% mark */
     .timer-panel {
       position: absolute;
-      top: 53%;
+      top: 62%;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       width: 58%;
       background: transparent;
       border: none;
@@ -304,10 +307,8 @@
       font-size: clamp(32px, calc(var(--clock-size) * 0.085), 120px);
     }
 
-    /* Viewer: no controls, so timer number can fill the lower circle */
+    /* Viewer: no controls so the timer number can be much larger */
     body.viewer .timer-panel {
-      top: 55%;
-      transform: translate(-50%, -50%);
       width: 70%;
     }
 
@@ -316,6 +317,9 @@
       margin-bottom: 0;
     }
 
+    /* Viewer with no timer set — hide panel, recentre clock info */
+    body.viewer.timer-unset .timer-panel { display: none; }
+    body.viewer.timer-unset .clock-center { top: 50%; }
   }
 </style>
 </head>
@@ -494,6 +498,9 @@
   let timerLocalEndAt = null;   // local Date.now() target when running
   let timerRemaining = 0;       // used when not running
 
+  // Apply viewer idle class immediately so there's no flash of the timer panel
+  if (!isOperator) document.body.classList.add('timer-unset');
+
   // ── Duration memory (server-side, expires after 12 hours) ────────────
   fetch(BASE + 'timer/duration', { cache: 'no-store' })
     .then(r => r.json())
@@ -503,6 +510,7 @@
       if (timerState === 'idle') {
         timerRemaining = (mins * 60 + secs) * 1000;
         renderTimer();
+        updateTimerUnset();
       }
     })
     .catch(() => {});
@@ -530,6 +538,12 @@
     return `${String(Math.floor(total / 60)).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`;
   }
 
+  function updateTimerUnset() {
+    if (!isOperator) {
+      document.body.classList.toggle('timer-unset', timerState === 'idle' && timerRemaining === 0);
+    }
+  }
+
   function applyState({ state, remaining }) {
     timerState = state;
     if (state === 'running') {
@@ -540,6 +554,7 @@
     }
     renderTimer();
     showButtons(state);
+    updateTimerUnset();
   }
 
   function renderTimer() {
