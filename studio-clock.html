@@ -1880,11 +1880,26 @@ function applyViewerFocus() {
 }
 
 // ── SSE connection ─────────────────────────────────────────────────────────
+// Apply cached state immediately on viewer to avoid FOUC
+const _STATE_KEY = 'sc_state';
+if (!isOperator) {
+  try {
+    const cached = localStorage.getItem(_STATE_KEY);
+    if (cached) applySSEState(JSON.parse(cached));
+  } catch {}
+}
+
 function connectSSE() {
   const dot = document.getElementById('connDot');
   const es  = new EventSource(BASE + 'events');
   es.onopen    = () => { if (dot) dot.className = 'conn-dot connected'; };
-  es.onmessage = e => { try { applySSEState(JSON.parse(e.data)); } catch {} };
+  es.onmessage = e => {
+    try {
+      const state = JSON.parse(e.data);
+      applySSEState(state);
+      if (!isOperator) localStorage.setItem(_STATE_KEY, e.data);
+    } catch {}
+  };
   es.onerror   = () => {
     if (dot) dot.className = 'conn-dot error';
     es.close();
