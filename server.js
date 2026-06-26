@@ -123,6 +123,21 @@ setInterval(() => {
   }
 }, 250);
 
+// ── Presets (persisted to presets.json) ──────────────────────────────────
+const PRESETS_FILE = path.join(__dirname, 'presets.json');
+let presets = {};
+
+try {
+  presets = JSON.parse(fs.readFileSync(PRESETS_FILE, 'utf8'));
+  console.log(`Loaded ${Object.keys(presets).length} preset(s) from presets.json`);
+} catch {}
+
+function savePresetsFile() {
+  fs.writeFile(PRESETS_FILE, JSON.stringify(presets, null, 2), err => {
+    if (err) console.warn('Could not save presets.json:', err.message);
+  });
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 function parseBody(req, cb) {
   let body = '';
@@ -135,17 +150,48 @@ function parseBody(req, cb) {
 
 function noContent(res) { res.writeHead(204); res.end(); }
 
+function json(res, data) {
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(data));
+}
+
 // ── Server ────────────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  // Last operator-set duration (shared across devices, expires after 12h)
-  if (req.method === 'GET' && req.url === '/timer/duration') {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify(savedDuration()));
+  // Parse pathname separately from query string
+  const pathname = req.url.split('?')[0];
+
+  // Presets — list all
+  if (req.method === 'GET' && pathname === '/presets') {
+    return json(res, presets);
   }
 
-  if (req.method === 'POST' && req.url === '/timer/duration') {
+  // Presets — save
+  if (req.method === 'POST' && pathname === '/presets') {
+    return parseBody(req, body => {
+      const name = String(body.name || '').trim().slice(0, 80);
+      if (!name) { res.writeHead(400); return res.end('name required'); }
+      presets[name] = body.settings || {};
+      savePresetsFile();
+      noContent(res);
+    });
+  }
+
+  // Presets — delete
+  if (req.method === 'DELETE' && pathname.startsWith('/presets/')) {
+    const name = decodeURIComponent(pathname.slice('/presets/'.length));
+    delete presets[name];
+    savePresetsFile();
+    return noContent(res);
+  }
+
+  // Last operator-set duration (shared across devices, expires after 12h)
+  if (req.method === 'GET' && pathname === '/timer/duration') {
+    return json(res, savedDuration());
+  }
+
+  if (req.method === 'POST' && pathname === '/timer/duration') {
     return parseBody(req, body => {
       const mins = Math.max(0, parseInt(body.mins) || 0);
       const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
@@ -155,13 +201,12 @@ const server = http.createServer((req, res) => {
   }
 
   // Current server time for clock sync (NTP-corrected)
-  if (req.method === 'GET' && req.url === '/time') {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    return res.end(JSON.stringify({ ts: ntpNow(), ntpSynced }));
+  if (req.method === 'GET' && pathname === '/time') {
+    return json(res, { ts: ntpNow(), ntpSynced });
   }
 
   // SSE stream — pushes timer state to all connected clients
-  if (req.method === 'GET' && req.url === '/events') {
+  if (req.method === 'GET' && pathname === '/events') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -175,7 +220,7 @@ const server = http.createServer((req, res) => {
   }
 
   // Timer control endpoints
-  if (req.method === 'POST' && req.url === '/timer/start') {
+  if (req.method === 'POST' && pathname === '/timer/start') {
     return parseBody(req, body => {
       const mins = Math.max(0, parseInt(body.mins) || 0);
       const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
@@ -189,7 +234,7 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  if (req.method === 'POST' && req.url === '/timer/pause') {
+  if (req.method === 'POST' && pathname === '/timer/pause') {
     if (timer.state === 'running') {
       timer.remaining = Math.max(0, timer.endAt - Date.now());
       timer.state = 'paused';
@@ -199,7 +244,7 @@ const server = http.createServer((req, res) => {
     return noContent(res);
   }
 
-  if (req.method === 'POST' && req.url === '/timer/resume') {
+  if (req.method === 'POST' && pathname === '/timer/resume') {
     if (timer.state === 'paused') {
       timer.endAt = Date.now() + timer.remaining;
       timer.state = 'running';
@@ -208,7 +253,7 @@ const server = http.createServer((req, res) => {
     return noContent(res);
   }
 
-  if (req.method === 'POST' && req.url === '/timer/reset') {
+  if (req.method === 'POST' && pathname === '/timer/reset') {
     return parseBody(req, body => {
       const mins = Math.max(0, parseInt(body.mins) || 0);
       const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
@@ -219,8 +264,8 @@ const server = http.createServer((req, res) => {
     });
   }
 
-  // Serve the app — / for viewers, /operator for the operator
-  if (req.method === 'GET' && (req.url === '/' || req.url === '/operator')) {
+  // Serve the app — / and /operator are the two UI routes (query strings allowed)
+  if (req.method === 'GET' && (pathname === '/' || pathname === '/operator')) {
     fs.readFile(path.join(__dirname, 'studio-clock.html'), (err, data) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
       res.writeHead(200, {
