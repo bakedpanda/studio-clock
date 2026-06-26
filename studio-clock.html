@@ -86,17 +86,18 @@ body.viewer.chromakey .top-right { display: none !important; }
   justify-content: center;
   width: 100%;
   height: 100%;
-  gap: 3vh;
-  padding: 4vh 4vw;
+  gap: 1vh;
+  padding: 3vh 4vw;
   overflow: hidden;
 }
 
 /* Each viewer element: hidden by default, JS sets display:flex to show */
 .vw-el {
   display: none;
+  flex: 1;
+  min-height: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   width: 100%;
 }
 
@@ -198,7 +199,7 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 
 /* ── Viewer element values ── */
 .vw-el-value {
-  font-size: clamp(40px, min(13vw, 19vh), 240px);
+  font-size: clamp(40px, min(16vw, 24vh), 320px);
   font-weight: 700;
   letter-spacing: 0.05em;
   line-height: 1.05;
@@ -206,7 +207,7 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 }
 
 .vw-message-text {
-  font-size: clamp(22px, min(7vw, 10vh), 140px);
+  font-size: clamp(28px, min(13vw, 18vh), 240px);
   font-weight: 700;
   color: var(--text-color);
   text-align: center;
@@ -666,35 +667,21 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 
 .le-el {
   position: absolute;
-  border: 1.5px dashed;
-  border-radius: 4px;
+  border: 1px dashed;
+  border-radius: 3px;
   cursor: grab;
   user-select: none;
   transform-origin: center;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 10px;
-  min-width: 60px;
+  padding: 4px 8px;
   touch-action: none;
   transition: box-shadow 0.15s;
+  line-height: 1.1;
 }
-.le-el:hover   { box-shadow: 0 0 0 1px rgba(255,255,255,0.08); }
-.le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.18); }
-.le-el-label {
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  pointer-events: none;
-  white-space: nowrap;
-}
-.le-el-pos {
-  font-size: 8px;
-  color: #333;
-  pointer-events: none;
-}
+.le-el:hover    { box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
+.le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
 
 .le-sidebar {
   width: 240px;
@@ -1352,6 +1339,7 @@ const LE_ELEMENTS = {
 let _leDrag = null;
 let _leStageBuilt = false;
 
+let _leRefreshInterval = null;
 function openLayoutEditor() {
   const modal = document.getElementById('layoutModal');
   if (!modal) return;
@@ -1360,11 +1348,13 @@ function openLayoutEditor() {
   updateLeStage();
   updateLayoutEditorControls();
   modal.style.display = 'flex';
+  _leRefreshInterval = setInterval(updateLeStage, 500);
 }
 
 function closeLayoutEditor() {
   const modal = document.getElementById('layoutModal');
   if (modal) modal.style.display = 'none';
+  if (_leRefreshInterval) { clearInterval(_leRefreshInterval); _leRefreshInterval = null; }
 }
 
 function onLeToggle() {
@@ -1382,9 +1372,8 @@ function buildLeStage() {
     el.className = 'le-el';
     el.id = 'le-el-' + key;
     el.dataset.key = key;
-    el.style.borderColor = info.color + '99';
-    el.style.background  = info.color + '11';
-    el.innerHTML = `<span class="le-el-label" style="color:${info.color}">${info.label}</span>`;
+    el.style.borderColor = info.color + '80';
+    el.style.background  = info.color + '0d';
     stage.appendChild(el);
     el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
     el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
@@ -1471,14 +1460,31 @@ function resetLayout() {
   pushSettingsToServer();
 }
 
+function lePreviewContent(key) {
+  // Return { text, fontSize (as % of stage height) } for each element
+  const stageEl = document.getElementById('leStage');
+  const stageH = stageEl ? stageEl.offsetHeight : 270;
+  // Font sizes mirror viewer proportions (16vh / 18vh / 24vh of viewer height mapped to stage)
+  switch (key) {
+    case 'clock':      return { text: document.getElementById('timeDisplay')?.textContent || '00:00:00', fs: stageH * 0.23 };
+    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: stageH * 0.24 };
+    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: stageH * 0.24 };
+    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: stageH * 0.24 };
+    case 'message':    return { text: document.getElementById('vwMsgText')?.textContent    || 'Message',  fs: stageH * 0.18 };
+    default:           return { text: key, fs: stageH * 0.20 };
+  }
+}
+
 function updateLeStage() {
-  for (const key of Object.keys(LE_ELEMENTS)) {
+  for (const [key, info] of Object.entries(LE_ELEMENTS)) {
     const el = document.getElementById('le-el-' + key);
     if (!el) continue;
     const p = getElemPos(key);
     el.style.left = p.x + '%';
     el.style.top  = p.y + '%';
     el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
+    const { text, fs } = lePreviewContent(key);
+    el.innerHTML = `<span style="color:${info.color};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
   }
 }
 
