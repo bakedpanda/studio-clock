@@ -201,6 +201,76 @@ canvas#clock {
 .sync-indicator.syncing { color: #ffb300; }
 .sync-indicator.error   { color: #ff1744; }
 
+/* ── Digital clock style ── */
+body.clock-digital canvas#clock { display: none !important; }
+body.clock-digital .clock-sizer {
+  width: auto;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+body.clock-digital .clock-center {
+  position: static;
+  transform: none;
+  width: auto;
+  text-align: center;
+}
+body.clock-digital .time-display   { font-size: clamp(40px, min(14vw, 22vh), 180px); letter-spacing: 0.08em; }
+body.clock-digital .date-display   { font-size: clamp(11px, 1.4vw, 16px); }
+body.clock-digital .sync-indicator { font-size: clamp(9px, 0.9vw, 11px); }
+
+/* ── Focus modes: countdown or stopwatch fills the screen ── */
+body.focus-timer   .vw-clock,
+body.focus-stopwatch .vw-clock { display: none !important; }
+
+body.focus-timer   .vw-widgets,
+body.focus-stopwatch .vw-widgets {
+  flex: 1 !important;
+  width: 100% !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+body.focus-timer   #vwTimer.visible,
+body.focus-stopwatch #vwStopwatch.visible {
+  max-height: 100vh !important;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+body.focus-timer   #vwTimer .vw-widget-inner,
+body.focus-stopwatch #vwStopwatch .vw-widget-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: none !important;
+}
+body.focus-timer   #vwTimer .vw-widget-value,
+body.focus-stopwatch #vwStopwatch .vw-widget-value {
+  font-size: clamp(72px, min(20vw, 26vh), 280px) !important;
+  text-align: center;
+}
+body.focus-timer   #vwTimer .vw-widget-label,
+body.focus-stopwatch #vwStopwatch .vw-widget-label {
+  font-size: 13px; letter-spacing: 4px; text-align: center; margin-bottom: 10px;
+}
+body.focus-timer   #vwStopwatch,
+body.focus-timer   #vwTarget,
+body.focus-timer   #vwMessage,
+body.focus-stopwatch #vwTimer,
+body.focus-stopwatch #vwTarget,
+body.focus-stopwatch #vwMessage { display: none !important; }
+
 /* Widget panel */
 .vw-widgets { display: flex; }
 
@@ -666,8 +736,23 @@ body:not(.layout-column):not(.layout-row) .vw-widget-value {
         </select>
       </div>
       <div class="sp-row">
+        <span class="sp-label">Clock style</span>
+        <select id="settingClockStyle" onchange="onSettingChange()">
+          <option value="analog">Analog</option>
+          <option value="digital">Digital</option>
+        </select>
+      </div>
+      <div class="sp-row">
         <span class="sp-label">Seconds ring</span>
         <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">Full-screen focus</span>
+        <select id="settingViewerFocus" onchange="onSettingChange()">
+          <option value="clock">Clock</option>
+          <option value="timer">Countdown Timer</option>
+          <option value="stopwatch">Stopwatch</option>
+        </select>
       </div>
     </div>
 
@@ -925,6 +1010,8 @@ const DEFAULT_SETTINGS = {
   textColor:    '#ffffff',
   chromakey:    false,
   viewerLayout: 'auto',
+  clockStyle:   'analog',
+  viewerFocus:  'clock',
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -979,19 +1066,25 @@ function applySettings(s) {
   document.documentElement.style.setProperty('--clock-color', settings.clockColor);
   document.documentElement.style.setProperty('--text-color',  settings.textColor);
   document.body.classList.toggle('chromakey', settings.chromakey);
+  document.body.classList.toggle('clock-digital', settings.clockStyle === 'digital');
   for (const l of ['sidebar','column','row']) document.body.classList.remove('layout-' + l);
   if (settings.viewerLayout !== 'auto') document.body.classList.add('layout-' + settings.viewerLayout);
+  for (const f of ['timer','stopwatch']) document.body.classList.remove('focus-' + f);
+  if (settings.viewerFocus !== 'clock') document.body.classList.add('focus-' + settings.viewerFocus);
 
   if (!isOperator) {
     const el = id => document.getElementById(id);
     const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
     const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
     const vl = el('settingViewerLayout'); if (vl) vl.value   = settings.viewerLayout;
+    const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
+    const vf = el('settingViewerFocus');  if (vf) vf.value   = settings.viewerFocus;
     setColorPair('Bg',    settings.bgColor);
     setColorPair('Clock', settings.clockColor);
     setColorPair('Text',  settings.textColor);
   }
   updateNavLinks();
+  applyViewerFocus();
 }
 
 function readSettingsFromPanel() {
@@ -1002,6 +1095,8 @@ function readSettingsFromPanel() {
     textColor:    document.getElementById('settingTextColor').value,
     chromakey:    document.getElementById('settingChromakey').checked,
     viewerLayout: document.getElementById('settingViewerLayout').value,
+    clockStyle:   document.getElementById('settingClockStyle').value,
+    viewerFocus:  document.getElementById('settingViewerFocus').value,
   };
 }
 
@@ -1379,12 +1474,19 @@ function applySSEState(state) {
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
+    applyViewerFocus();
   }
 }
 
 function showWidget(id, on) {
   const el = document.getElementById(id);
   if (el) el.classList.toggle('visible', !!on);
+}
+
+function applyViewerFocus() {
+  const f = settings.viewerFocus;
+  if (f === 'timer')     showWidget('vwTimer', true);
+  if (f === 'stopwatch') showWidget('vwStopwatch', true);
 }
 
 // ── SSE connection ─────────────────────────────────────────────────────────
