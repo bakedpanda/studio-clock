@@ -94,6 +94,18 @@ const show = {
   message:    false,
 };
 
+// Viewer display settings (broadcast to all viewers via SSE)
+const displaySettings = {
+  showSeconds:  true,
+  clockColor:   '#00e676',
+  bgColor:      '#0a0a0a',
+  textColor:    '#ffffff',
+  chromakey:    false,
+  viewerLayout: 'auto',
+  clockStyle:   'analog',
+  viewerFocus:  'clock',
+};
+
 let expiredTimeout = null;
 let flashTimeout   = null;
 
@@ -133,6 +145,7 @@ function snapshot() {
     message:    { text: message.text, visible: message.visible, flash: message.flash },
     show:       { clock: show.clock, timer: show.timer, stopwatch: show.stopwatch,
                   targetTime: show.targetTime, message: show.message },
+    displaySettings: { ...displaySettings },
   };
 }
 
@@ -171,6 +184,40 @@ function savePresetsFile() {
   });
 }
 
+// ── Persistent state ──────────────────────────────────────────────────────
+const STATE_FILE = path.join(__dirname, 'state.json');
+
+function loadState() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    if (saved.displaySettings) Object.assign(displaySettings, saved.displaySettings);
+    if (saved.timerLabel  !== undefined) timer.label  = saved.timerLabel;
+    if (saved.timerWarnAt !== undefined) timer.warnAt = saved.timerWarnAt;
+    if (saved.swLabel     !== undefined) stopwatch.label = saved.swLabel;
+    if (saved.targetTime)  Object.assign(targetTime, saved.targetTime);
+    if (saved.message)     Object.assign(message,    { text: saved.message.text || '', visible: false, flash: false });
+    if (saved.show)        Object.assign(show,        saved.show);
+    console.log('Loaded persistent state');
+  } catch {}
+}
+
+function saveState() {
+  const data = {
+    displaySettings: { ...displaySettings },
+    timerLabel:  timer.label,
+    timerWarnAt: timer.warnAt,
+    swLabel:     stopwatch.label,
+    targetTime:  { ...targetTime },
+    message:     { text: message.text },
+    show:        { ...show },
+  };
+  fs.writeFile(STATE_FILE, JSON.stringify(data, null, 2), err => {
+    if (err) console.warn('Could not save state.json:', err.message);
+  });
+}
+
+loadState();
+
 // ── HTTP helpers ──────────────────────────────────────────────────────────
 function parseBody(req, cb) {
   let body = '';
@@ -202,6 +249,24 @@ const server = http.createServer((req, res) => {
   if (req.method === 'DELETE' && pathname.startsWith('/presets/')) {
     delete presets[decodeURIComponent(pathname.slice('/presets/'.length))];
     savePresetsFile();
+    return noContent(res);
+  }
+
+  // Display settings
+  if (req.method === 'GET'  && pathname === '/settings') return json(res, displaySettings);
+  if (req.method === 'POST' && pathname === '/settings') {
+    return parseBody(req, body => {
+      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','viewerFocus'];
+      for (const k of keys) if (k in body) displaySettings[k] = body[k];
+      saveState();
+      broadcast(snapshot());
+      noContent(res);
+    });
+  }
+  if (req.method === 'POST' && pathname === '/settings/reset') {
+    Object.assign(displaySettings, { showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff', chromakey: false, viewerLayout: 'auto', clockStyle: 'analog', viewerFocus: 'clock' });
+    saveState();
+    broadcast(snapshot());
     return noContent(res);
   }
 
@@ -279,6 +344,7 @@ const server = http.createServer((req, res) => {
     return parseBody(req, body => {
       if (body.label  !== undefined) timer.label  = String(body.label).slice(0, 60);
       if (body.warnAt !== undefined) timer.warnAt = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
+      saveState();
       broadcast(snapshot());
       noContent(res);
     });
@@ -316,6 +382,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'POST' && pathname === '/stopwatch/config') {
     return parseBody(req, body => {
       if (body.label !== undefined) stopwatch.label = String(body.label).slice(0, 60);
+      saveState();
       broadcast(snapshot());
       noContent(res);
     });
@@ -327,6 +394,7 @@ const server = http.createServer((req, res) => {
       if (body.target  !== undefined) targetTime.target  = String(body.target).slice(0, 5);
       if (body.label   !== undefined) targetTime.label   = String(body.label).slice(0, 60);
       if (body.enabled !== undefined) targetTime.enabled = !!body.enabled;
+      saveState();
       broadcast(snapshot());
       noContent(res);
     });
@@ -348,6 +416,7 @@ const server = http.createServer((req, res) => {
           }, 3000);
         }
       }
+      saveState();
       broadcast(snapshot());
       noContent(res);
     });
@@ -359,6 +428,7 @@ const server = http.createServer((req, res) => {
       for (const k of ['clock', 'timer', 'stopwatch', 'targetTime', 'message']) {
         if (body[k] !== undefined) show[k] = !!body[k];
       }
+      saveState();
       broadcast(snapshot());
       noContent(res);
     });

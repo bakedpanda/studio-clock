@@ -74,8 +74,7 @@ body.viewer   .operator-only { display: none !important; }
 .icon-btn svg { width: 18px; height: 18px; }
 
 /* ── Chromakey ── */
-body.chromakey .top-right     { display: none !important; }
-body.chromakey #settingsPanel  { display: none !important; }
+body.viewer.chromakey .top-right { display: none !important; }
 
 /* Chromakey viewer: all elements float on plain bg, no layout chrome */
 body.chromakey .vw-page {
@@ -408,7 +407,7 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
 }
 
 .op-time {
-  font-size: clamp(32px, 6vw, 68px);
+  font-size: clamp(48px, 8vw, 96px);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #fff;
@@ -829,6 +828,12 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
     <hr class="sp-divider">
 
     <div class="sp-section">
+      <button class="btn-sm" style="width:100%;text-align:center;" onclick="resetSettingsToDefaults()">Reset to Defaults</button>
+    </div>
+
+    <hr class="sp-divider">
+
+    <div class="sp-section">
       <div class="sp-section-title">Presets</div>
       <div class="preset-name-row">
         <input type="text" id="presetNameInput" placeholder="Preset name…" maxlength="80">
@@ -1094,24 +1099,28 @@ function applySettings(s) {
   document.documentElement.style.setProperty('--bg-color',    settings.bgColor);
   document.documentElement.style.setProperty('--clock-color', settings.clockColor);
   document.documentElement.style.setProperty('--text-color',  settings.textColor);
-  document.body.classList.toggle('chromakey', settings.chromakey);
-  document.body.classList.toggle('clock-digital', settings.clockStyle === 'digital');
-  for (const l of ['sidebar','column','row']) document.body.classList.remove('layout-' + l);
-  if (settings.viewerLayout !== 'auto') document.body.classList.add('layout-' + settings.viewerLayout);
-  for (const f of ['timer','stopwatch']) document.body.classList.remove('focus-' + f);
-  if (settings.viewerFocus !== 'clock') document.body.classList.add('focus-' + settings.viewerFocus);
 
+  // Visual body classes only affect the viewer page
   if (!isOperator) {
-    const el = id => document.getElementById(id);
-    const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
-    const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
-    const vl = el('settingViewerLayout'); if (vl) vl.value   = settings.viewerLayout;
-    const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
-    const vf = el('settingViewerFocus');  if (vf) vf.value   = settings.viewerFocus;
-    setColorPair('Bg',    settings.bgColor);
-    setColorPair('Clock', settings.clockColor);
-    setColorPair('Text',  settings.textColor);
+    document.body.classList.toggle('chromakey', settings.chromakey);
+    document.body.classList.toggle('clock-digital', settings.clockStyle === 'digital');
+    for (const l of ['sidebar','column','row']) document.body.classList.remove('layout-' + l);
+    if (settings.viewerLayout !== 'auto') document.body.classList.add('layout-' + settings.viewerLayout);
+    for (const f of ['timer','stopwatch']) document.body.classList.remove('focus-' + f);
+    if (settings.viewerFocus !== 'clock') document.body.classList.add('focus-' + settings.viewerFocus);
   }
+
+  // Sync settings panel controls (operator page)
+  const el = id => document.getElementById(id);
+  const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
+  const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
+  const vl = el('settingViewerLayout'); if (vl) vl.value   = settings.viewerLayout;
+  const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
+  const vf = el('settingViewerFocus');  if (vf) vf.value   = settings.viewerFocus;
+  setColorPair('Bg',    settings.bgColor);
+  setColorPair('Clock', settings.clockColor);
+  setColorPair('Text',  settings.textColor);
+
   updateNavLinks();
   applyViewerFocus();
 }
@@ -1129,10 +1138,31 @@ function readSettingsFromPanel() {
   };
 }
 
-function onSettingChange() { applySettings(readSettingsFromPanel()); }
+let _settingsPushTimer = null;
+function pushSettingsToServer() {
+  clearTimeout(_settingsPushTimer);
+  _settingsPushTimer = setTimeout(() => {
+    fetch(BASE + 'settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    }).catch(() => {});
+  }, 120);
+}
 
-// Initialise from URL param
+function onSettingChange() {
+  applySettings(readSettingsFromPanel());
+  pushSettingsToServer();
+}
+
+function resetSettingsToDefaults() {
+  fetch(BASE + 'settings/reset', { method: 'POST' }).catch(() => {});
+  applySettings(DEFAULT_SETTINGS);
+}
+
+// Initialise: viewer uses URL param if present, otherwise server state via SSE
 const urlS = new URLSearchParams(location.search).get('s');
+const settingsPinned = !isOperator && !!urlS;
 applySettings(urlS ? (decodeSettings(urlS) || DEFAULT_SETTINGS) : DEFAULT_SETTINGS);
 
 function updateNavLinks() {
@@ -1504,6 +1534,11 @@ function applySSEState(state) {
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
     applyViewerFocus();
+  }
+  if (state.displaySettings) {
+    // Viewer: apply unless pinned to a URL preset
+    // Operator: always sync panel controls (but don't apply body classes)
+    if (!settingsPinned) applySettings(state.displaySettings);
   }
 }
 
