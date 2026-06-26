@@ -76,108 +76,43 @@ body.viewer   .operator-only { display: none !important; }
 /* ── Chromakey ── */
 body.viewer.chromakey .top-right { display: none !important; }
 
-/* Chromakey viewer: all elements float on plain bg, no layout chrome */
-body.chromakey .vw-page {
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 36px;
-  padding: 40px;
-}
-body.chromakey .vw-clock { flex: none; }
-body.chromakey .vw-widgets {
-  flex-direction: column !important;
-  width: auto !important;
-  max-width: 100% !important;
-  border: none !important;
-  overflow: visible !important;
-  align-items: center;
-  gap: 12px;
-}
-body.chromakey .vw-widget.visible { max-height: 300px !important; width: auto; }
-body.chromakey .vw-widget-inner   { border: none !important; padding: 0 !important; text-align: center; }
-body.chromakey .vw-widget-label   { color: rgba(255,255,255,0.3); }
-body.chromakey .vw-widget-value   { font-size: clamp(36px, 6vw, 88px) !important; }
-body.chromakey .vw-message-text   { text-align: center; }
-
 /* ────────────────────────────────────────────────────
-   VIEWER PAGE
+   VIEWER PAGE — flat floating elements, no panel
 ──────────────────────────────────────────────────── */
 .vw-page {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
+  gap: 3vh;
+  padding: 4vh 4vw;
+  overflow: hidden;
 }
 
-/* Auto: landscape = sidebar, portrait = column */
-@media (orientation: landscape) {
-  body:not(.layout-column):not(.layout-row) .vw-page,
-  body.layout-sidebar .vw-page { flex-direction: row; }
-
-  body:not(.layout-column):not(.layout-row),
-  body.layout-sidebar { --clock-size: min(calc(100vh - 16px), calc(100vw - 300px)); }
-
-  body:not(.layout-column):not(.layout-row) .vw-widgets,
-  body.layout-sidebar .vw-widgets {
-    width: 280px;
-    flex-shrink: 0;
-    flex-direction: column;
-    border-left: 2px solid #1e1e1e;
-    overflow-y: auto;
-  }
+/* Each viewer element: hidden by default, JS sets display:flex to show */
+.vw-el {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 100%;
 }
 
-@media (orientation: portrait) {
-  body:not(.layout-sidebar):not(.layout-row) .vw-page,
-  body.layout-column .vw-page { flex-direction: column; }
-
-  body:not(.layout-sidebar):not(.layout-row) .vw-widgets,
-  body.layout-column .vw-widgets {
-    width: 100%;
-    flex-direction: column;
-    border-top: 1px solid #181818;
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
-}
-
-/* Explicit layouts */
-body.layout-sidebar .vw-page { flex-direction: row; }
-body.layout-sidebar .vw-widgets {
-  width: 280px; flex-shrink: 0; flex-direction: column;
-  border-left: 2px solid #1e1e1e; overflow-y: auto;
-}
-body.layout-sidebar { --clock-size: min(calc(100vh - 16px), calc(100vw - 300px)); }
-
-body.layout-column .vw-page { flex-direction: column; }
-body.layout-column .vw-widgets {
-  width: 100%; flex-direction: column; flex-shrink: 0;
-  border-top: 2px solid #1e1e1e; overflow-y: auto;
-}
-
-body.layout-row .vw-page { flex-direction: column; }
-body.layout-row .vw-widgets {
-  width: 100%; flex-direction: row; flex-shrink: 0;
-  border-top: 2px solid #1e1e1e; overflow-x: auto;
-}
-body.layout-row .vw-widget.visible { max-height: none; flex: 1; min-width: 180px; }
-body.layout-row .vw-widget-inner { border-bottom: none; border-right: 2px solid #1e1e1e; }
+/* Clock always visible */
+#vwClock { display: flex; }
 
 /* Clock area */
 .vw-clock {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  padding: 8px;
 }
 
 .clock-sizer {
-  width: var(--clock-size);
-  height: var(--clock-size);
+  width: var(--clock-size, min(46vh, 46vw));
+  height: var(--clock-size, min(46vh, 46vw));
   position: relative;
   flex-shrink: 0;
 }
@@ -234,10 +169,8 @@ body.clock-digital .clock-sizer {
   width: auto;
   height: auto;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
 }
 body.clock-digital .clock-center {
   position: static;
@@ -245,107 +178,39 @@ body.clock-digital .clock-center {
   width: auto;
   text-align: center;
 }
-body.clock-digital .time-display   { font-size: clamp(40px, min(14vw, 22vh), 180px); letter-spacing: 0.08em; }
-body.clock-digital .date-display   { font-size: clamp(11px, 1.4vw, 16px); }
-body.clock-digital .sync-indicator { font-size: clamp(9px, 0.9vw, 11px); }
+body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px); letter-spacing: 0.06em; }
 
-/* ── Focus modes: countdown or stopwatch fills the screen ── */
-body.focus-timer   .vw-clock,
-body.focus-stopwatch .vw-clock { display: none !important; }
-
-body.focus-timer   .vw-widgets,
-body.focus-stopwatch .vw-widgets {
-  flex: 1 !important;
-  width: 100% !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border: none !important;
-  overflow: visible !important;
-}
-
-body.focus-timer   #vwTimer.visible,
-body.focus-stopwatch #vwStopwatch.visible {
-  max-height: 100vh !important;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-body.focus-timer   #vwTimer .vw-widget-inner,
-body.focus-stopwatch #vwStopwatch .vw-widget-inner {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  border: none !important;
-}
-body.focus-timer   #vwTimer .vw-widget-value,
-body.focus-stopwatch #vwStopwatch .vw-widget-value {
-  font-size: clamp(72px, min(20vw, 26vh), 280px) !important;
-  text-align: center;
-}
-body.focus-timer   #vwTimer .vw-widget-label,
-body.focus-stopwatch #vwStopwatch .vw-widget-label {
-  font-size: 13px; letter-spacing: 4px; text-align: center; margin-bottom: 10px;
-}
+/* ── Focus modes ── */
+body.focus-timer   #vwClock,
+body.focus-stopwatch #vwClock { display: none !important; }
 body.focus-timer   #vwStopwatch,
 body.focus-timer   #vwTarget,
 body.focus-timer   #vwMessage,
 body.focus-stopwatch #vwTimer,
 body.focus-stopwatch #vwTarget,
 body.focus-stopwatch #vwMessage { display: none !important; }
-
-/* Widget panel */
-.vw-widgets { display: flex; }
-
-.vw-widget {
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: max-height 0.35s ease, opacity 0.3s ease, transform 0.3s ease;
-  flex-shrink: 0;
-}
-.vw-widget.visible {
-  max-height: 260px;
-  opacity: 1;
-  transform: translateY(0);
+body.focus-timer   #vwTimer     { display: flex !important; }
+body.focus-stopwatch #vwStopwatch { display: flex !important; }
+body.focus-timer   #vwTimer .vw-el-value,
+body.focus-stopwatch #vwStopwatch .vw-el-value {
+  font-size: clamp(72px, min(22vw, 30vh), 360px) !important;
 }
 
-.vw-widget-inner {
-  padding: 22px 24px;
-  border-bottom: 2px solid #1e1e1e;
-}
-
-.vw-widget-label {
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: #444;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-}
-
-.vw-widget-value {
-  font-size: clamp(44px, 7vw, 96px);
+/* ── Viewer element values ── */
+.vw-el-value {
+  font-size: clamp(40px, min(13vw, 19vh), 240px);
   font-weight: 700;
   letter-spacing: 0.05em;
   line-height: 1.05;
   transition: color 0.3s;
 }
 
-/* Sidebar is narrower — constrain font so HH:MM:SS fits */
-@media (orientation: landscape) {
-  body:not(.layout-column):not(.layout-row) .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
-}
-body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
-
 .vw-message-text {
-  font-size: clamp(20px, 3.5vw, 44px);
-  color: #fff;
-  line-height: 1.4;
+  font-size: clamp(22px, min(7vw, 10vh), 140px);
+  font-weight: 700;
+  color: var(--text-color);
+  text-align: center;
+  line-height: 1.25;
   word-break: break-word;
   white-space: pre-wrap;
 }
@@ -367,7 +232,7 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
 .target-elapsed { color: #555; }
 
 /* Flash animation */
-.vw-widget.flashing .vw-message-text {
+#vwMessage.flashing .vw-message-text {
   animation: cue-flash 0.5s ease-in-out 6;
 }
 
@@ -720,34 +585,16 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
 ──────────────────────────────────────────────────── */
 body.custom-layout .vw-page {
   position: relative;
-  overflow: hidden;
+  gap: 0;
+  padding: 0;
 }
-body.custom-layout .vw-clock {
+body.custom-layout .vw-el {
   position: absolute;
-  flex: none;
-  width: auto; height: auto;
-}
-body.custom-layout .vw-widgets {
-  position: absolute;
-  inset: 0;
-  border: none !important;
-  overflow: visible;
-  pointer-events: none;
-  display: block;
-}
-body.custom-layout .vw-widget {
-  position: absolute;
-  pointer-events: none;
   width: auto;
   transform-origin: center;
 }
-body.custom-layout .vw-widget.visible {
-  max-height: none;
-}
-body.custom-layout .vw-widget-inner {
-  border: none !important;
-  white-space: nowrap;
-}
+body.custom-layout .vw-el-value { white-space: nowrap; }
+body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center; }
 
 /* ────────────────────────────────────────────────────
    LAYOUT EDITOR MODAL
@@ -1274,7 +1121,7 @@ body.custom-layout .vw-widget-inner {
 ═════════════════════════════════════════════════════ -->
 <div class="vw-page viewer-only">
 
-  <div class="vw-clock">
+  <div class="vw-el vw-clock" id="vwClock">
     <div class="clock-sizer">
       <canvas id="clock"></canvas>
       <div class="clock-center">
@@ -1285,37 +1132,22 @@ body.custom-layout .vw-widget-inner {
     </div>
   </div>
 
-  <div class="vw-widgets" id="vwWidgets">
-
-    <div class="vw-widget" id="vwTimer">
-      <div class="vw-widget-inner">
-        <div class="vw-widget-label" id="vwTimerLabel">Timer</div>
-        <div class="vw-widget-value timer-idle" id="vwTimerValue">00:00</div>
-      </div>
-    </div>
-
-    <div class="vw-widget" id="vwStopwatch">
-      <div class="vw-widget-inner">
-        <div class="vw-widget-label" id="vwSwLabel">Stopwatch</div>
-        <div class="vw-widget-value sw-idle" id="vwSwValue">00:00</div>
-      </div>
-    </div>
-
-    <div class="vw-widget" id="vwTarget">
-      <div class="vw-widget-inner">
-        <div class="vw-widget-label" id="vwTargetLabel">Target Time</div>
-        <div class="vw-widget-value target-pending" id="vwTargetValue">--:--</div>
-      </div>
-    </div>
-
-    <div class="vw-widget" id="vwMessage">
-      <div class="vw-widget-inner">
-        <div class="vw-widget-label">Cue</div>
-        <div class="vw-message-text" id="vwMsgText"></div>
-      </div>
-    </div>
-
+  <div class="vw-el" id="vwTimer">
+    <div class="vw-el-value timer-idle" id="vwTimerValue">00:00</div>
   </div>
+
+  <div class="vw-el" id="vwStopwatch">
+    <div class="vw-el-value sw-idle" id="vwSwValue">00:00</div>
+  </div>
+
+  <div class="vw-el" id="vwTarget">
+    <div class="vw-el-value target-pending" id="vwTargetValue">--:--</div>
+  </div>
+
+  <div class="vw-el" id="vwMessage">
+    <div class="vw-message-text" id="vwMsgText"></div>
+  </div>
+
 </div>
 
 <script>
@@ -1489,25 +1321,17 @@ function updateNavLinks() {
 function applyCustomLayout() {
   const use = settings.customLayout;
   document.body.classList.toggle('custom-layout', use);
+  const ids = ['vwClock','vwTimer','vwStopwatch','vwTarget','vwMessage'];
   if (!use) {
-    // clear any inline positioning
-    for (const id of ['vwTimer','vwStopwatch','vwTarget','vwMessage']) {
+    for (const id of ids) {
       const el = document.getElementById(id);
       if (el) { el.style.left = ''; el.style.top = ''; el.style.transform = ''; }
     }
-    const cw = document.querySelector('.vw-clock');
-    if (cw) { cw.style.left = ''; cw.style.top = ''; cw.style.transform = ''; }
     return;
   }
   const pos = settings.elementPositions;
-  const cw = document.querySelector('.vw-clock');
-  if (cw && pos.clock) {
-    cw.style.left = pos.clock.x + '%';
-    cw.style.top  = pos.clock.y + '%';
-    cw.style.transform = `translate(-50%, -50%) scale(${pos.clock.scale})`;
-  }
-  const widgetMap = { timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
-  for (const [key, id] of Object.entries(widgetMap)) {
+  const map = { clock: 'vwClock', timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
+  for (const [key, id] of Object.entries(map)) {
     const el = document.getElementById(id);
     if (el && pos[key]) {
       el.style.left = pos[key].x + '%';
@@ -2007,12 +1831,11 @@ function applySSEState(state) {
   }
   if (state.message) {
     sseMessage = state.message;
-    const msgEl  = document.getElementById('vwMessage');
     const txtEl  = document.getElementById('vwMsgText');
-    const showEl = document.getElementById('showMessage');
+    const msgEl  = document.getElementById('vwMessage');
     if (txtEl) txtEl.textContent = state.message.text;
     setEl('msgText', state.message.text);
-    if (showEl) showEl.checked = state.message.visible;
+    setChk('showMessage', state.message.visible);
 
     if (state.message.flash && msgEl) {
       msgEl.classList.remove('flashing');
@@ -2027,7 +1850,7 @@ function applySSEState(state) {
     showWidget('vwTimer',     state.show.timer);
     showWidget('vwStopwatch', state.show.stopwatch);
     showWidget('vwTarget',    state.show.targetTime);
-    showWidget('vwMessage',   state.show.message && (sseMessage ? sseMessage.visible : false));
+    showWidget('vwMessage',   state.show.message && sseMessage && sseMessage.visible);
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
@@ -2042,7 +1865,7 @@ function applySSEState(state) {
 
 function showWidget(id, on) {
   const el = document.getElementById(id);
-  if (el) el.classList.toggle('visible', !!on);
+  if (el) el.style.display = on ? 'flex' : 'none';
 }
 
 function applyViewerFocus() {
