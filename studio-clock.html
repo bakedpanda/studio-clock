@@ -714,6 +714,206 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
 }
 .preset-item-delete:hover { color: #ff1744; }
 .no-presets { font-size: 10px; color: #242424; padding: 4px 0; }
+
+/* ────────────────────────────────────────────────────
+   CUSTOM LAYOUT — viewer absolute positioning
+──────────────────────────────────────────────────── */
+body.custom-layout .vw-page {
+  position: relative;
+  overflow: hidden;
+}
+body.custom-layout .vw-clock {
+  position: absolute;
+  flex: none;
+  width: auto; height: auto;
+}
+body.custom-layout .vw-widgets {
+  position: absolute;
+  inset: 0;
+  border: none !important;
+  overflow: visible;
+  pointer-events: none;
+  display: block;
+}
+body.custom-layout .vw-widget {
+  position: absolute;
+  pointer-events: none;
+  width: auto;
+  transform-origin: center;
+}
+body.custom-layout .vw-widget.visible {
+  max-height: none;
+}
+body.custom-layout .vw-widget-inner {
+  border: none !important;
+  white-space: nowrap;
+}
+
+/* ────────────────────────────────────────────────────
+   LAYOUT EDITOR MODAL
+──────────────────────────────────────────────────── */
+#layoutModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: #050505;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.le-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #1a1a1a;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.le-title {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #444;
+  text-transform: uppercase;
+  margin-right: auto;
+}
+.le-enable-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.le-enable-label input[type=checkbox] { accent-color: #00e676; width: 14px; height: 14px; }
+.le-enable-label input:checked ~ span { color: #00e676; }
+
+.le-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.le-stage-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  min-width: 0;
+  min-height: 0;
+  background: #080808;
+}
+
+#leStage {
+  position: relative;
+  background: #0a0a0a;
+  border: 1px solid #1e1e1e;
+  overflow: hidden;
+  /* aspect-ratio maintained via JS sizing */
+}
+
+.le-el {
+  position: absolute;
+  border: 1.5px dashed;
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+  transform-origin: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  min-width: 60px;
+  touch-action: none;
+  transition: box-shadow 0.15s;
+}
+.le-el:hover   { box-shadow: 0 0 0 1px rgba(255,255,255,0.08); }
+.le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.18); }
+.le-el-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.le-el-pos {
+  font-size: 8px;
+  color: #333;
+  pointer-events: none;
+}
+
+.le-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-left: 1px solid #1a1a1a;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.le-ctrl {
+  background: #0e0e0e;
+  border: 1px solid #1c1c1c;
+  border-radius: 7px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.le-ctrl-name {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.le-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.le-ctrl-lbl {
+  font-size: 9px;
+  color: #333;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 36px;
+  flex-shrink: 0;
+}
+.le-scale-range {
+  flex: 1;
+  accent-color: #555;
+  cursor: pointer;
+}
+.le-scale-val {
+  font-size: 10px;
+  color: #444;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.le-pos-val {
+  font-size: 10px;
+  color: #2a2a2a;
+  flex: 1;
+  text-align: right;
+}
+
+.le-hint {
+  font-size: 10px;
+  color: #2a2a2a;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
 </style>
 </head>
 <body>
@@ -741,6 +941,87 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
   <div class="op-status-item" style="background:rgba(20,20,20,0.92);border:1px solid #2a2a2a;border-radius:6px;padding:7px 12px;font-size:10px;letter-spacing:1px;color:#333;display:flex;align-items:center;gap:6px;">
     <span class="conn-dot" id="connDot"></span>
     <span id="syncStatus">syncing…</span>
+  </div>
+</div>
+
+<!-- ── Layout editor modal ── -->
+<div id="layoutModal">
+  <div class="le-header">
+    <span class="le-title">Layout Editor</span>
+    <label class="le-enable-label">
+      <input type="checkbox" id="leCustomLayout" onchange="onLeToggle()">
+      <span>Custom Layout</span>
+    </label>
+    <button class="btn-sm" onclick="resetLayout()">Reset Positions</button>
+    <button class="btn-sm primary" onclick="closeLayoutEditor()">Done</button>
+  </div>
+  <div class="le-body">
+    <div class="le-stage-wrap">
+      <div id="leStage"></div>
+    </div>
+    <div class="le-sidebar">
+      <p class="le-hint">Drag elements on the stage to reposition. Use sliders to scale.</p>
+      <div class="le-ctrl">
+        <div class="le-ctrl-name" style="color:#00e676">Clock</div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">Scale</span>
+          <input type="range" class="le-scale-range" id="le-scale-clock" min="0.2" max="2.5" step="0.05" value="1" oninput="onScaleChange('clock',this.value)">
+          <span class="le-scale-val" id="le-scaleval-clock">100%</span>
+        </div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">X / Y</span>
+          <span class="le-pos-val" id="le-pos-clock">50 / 44</span>
+        </div>
+      </div>
+      <div class="le-ctrl">
+        <div class="le-ctrl-name" style="color:#ffd600">Timer</div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">Scale</span>
+          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
+          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
+        </div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">X / Y</span>
+          <span class="le-pos-val" id="le-pos-timer">20 / 76</span>
+        </div>
+      </div>
+      <div class="le-ctrl">
+        <div class="le-ctrl-name" style="color:#4fc3f7">Stopwatch</div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">Scale</span>
+          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
+          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
+        </div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">X / Y</span>
+          <span class="le-pos-val" id="le-pos-stopwatch">50 / 76</span>
+        </div>
+      </div>
+      <div class="le-ctrl">
+        <div class="le-ctrl-name" style="color:#ce93d8">Target Time</div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">Scale</span>
+          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
+          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
+        </div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">X / Y</span>
+          <span class="le-pos-val" id="le-pos-targetTime">80 / 76</span>
+        </div>
+      </div>
+      <div class="le-ctrl">
+        <div class="le-ctrl-name" style="color:#ff9800">Message</div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">Scale</span>
+          <input type="range" class="le-scale-range" id="le-scale-message" min="0.2" max="2.5" step="0.05" value="0.85" oninput="onScaleChange('message',this.value)">
+          <span class="le-scale-val" id="le-scaleval-message">85%</span>
+        </div>
+        <div class="le-ctrl-row">
+          <span class="le-ctrl-lbl">X / Y</span>
+          <span class="le-pos-val" id="le-pos-message">50 / 88</span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -823,6 +1104,17 @@ body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
         <input type="checkbox" id="settingChromakey" onchange="onSettingChange()">
       </div>
       <p class="sp-hint">Hides all UI chrome for clean video keying. Set your key colour using Background above.</p>
+    </div>
+
+    <hr class="sp-divider">
+
+    <div class="sp-section">
+      <div class="sp-section-title">Custom Layout</div>
+      <div class="sp-row">
+        <span class="sp-label">Enable custom positions</span>
+        <input type="checkbox" id="settingCustomLayout" onchange="onSettingChange()">
+      </div>
+      <button class="btn-sm" style="width:100%;text-align:center;margin-top:4px;" onclick="openLayoutEditor()">Edit Layout (16:9 Stage)</button>
     </div>
 
     <hr class="sp-divider">
@@ -1037,15 +1329,25 @@ const isOperator = lastSegment === 'operator';
 document.body.classList.add(isOperator ? 'operator' : 'viewer');
 
 // ── Settings (viewer display preferences) ─────────────────────────────────
+const DEFAULT_ELEMENT_POSITIONS = {
+  clock:      { x: 50, y: 44,  scale: 1.0  },
+  timer:      { x: 20, y: 76,  scale: 0.9  },
+  stopwatch:  { x: 50, y: 76,  scale: 0.9  },
+  targetTime: { x: 80, y: 76,  scale: 0.9  },
+  message:    { x: 50, y: 88,  scale: 0.85 },
+};
+
 const DEFAULT_SETTINGS = {
-  showSeconds:  true,
-  clockColor:   '#00e676',
-  bgColor:      '#0a0a0a',
-  textColor:    '#ffffff',
-  chromakey:    false,
-  viewerLayout: 'auto',
-  clockStyle:   'digital',
-  viewerFocus:  'clock',
+  showSeconds:      true,
+  clockColor:       '#00e676',
+  bgColor:          '#0a0a0a',
+  textColor:        '#ffffff',
+  chromakey:        false,
+  viewerLayout:     'auto',
+  clockStyle:       'digital',
+  viewerFocus:      'clock',
+  customLayout:     false,
+  elementPositions: JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS)),
 };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -1095,7 +1397,11 @@ function onColorTextChange(key) {
 }
 
 function applySettings(s) {
-  settings = { ...DEFAULT_SETTINGS, ...s };
+  settings = {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    elementPositions: { ...DEFAULT_SETTINGS.elementPositions, ...(s.elementPositions || {}) },
+  };
   document.documentElement.style.setProperty('--bg-color',    settings.bgColor);
   document.documentElement.style.setProperty('--clock-color', settings.clockColor);
   document.documentElement.style.setProperty('--text-color',  settings.textColor);
@@ -1108,33 +1414,39 @@ function applySettings(s) {
     if (settings.viewerLayout !== 'auto') document.body.classList.add('layout-' + settings.viewerLayout);
     for (const f of ['timer','stopwatch']) document.body.classList.remove('focus-' + f);
     if (settings.viewerFocus !== 'clock') document.body.classList.add('focus-' + settings.viewerFocus);
+    applyCustomLayout();
   }
 
   // Sync settings panel controls (operator page)
   const el = id => document.getElementById(id);
-  const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
-  const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
-  const vl = el('settingViewerLayout'); if (vl) vl.value   = settings.viewerLayout;
-  const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
-  const vf = el('settingViewerFocus');  if (vf) vf.value   = settings.viewerFocus;
+  const sc = el('settingShowSeconds');   if (sc) sc.checked = settings.showSeconds;
+  const ck = el('settingChromakey');     if (ck) ck.checked = settings.chromakey;
+  const vl = el('settingViewerLayout');  if (vl) vl.value   = settings.viewerLayout;
+  const cs = el('settingClockStyle');    if (cs) cs.value   = settings.clockStyle;
+  const vf = el('settingViewerFocus');   if (vf) vf.value   = settings.viewerFocus;
+  const cl = el('settingCustomLayout');  if (cl) cl.checked = settings.customLayout;
+  const le = el('leCustomLayout');       if (le) le.checked = settings.customLayout;
   setColorPair('Bg',    settings.bgColor);
   setColorPair('Clock', settings.clockColor);
   setColorPair('Text',  settings.textColor);
 
+  updateLayoutEditorControls();
   updateNavLinks();
   applyViewerFocus();
 }
 
 function readSettingsFromPanel() {
   return {
-    showSeconds:  document.getElementById('settingShowSeconds').checked,
-    bgColor:      document.getElementById('settingBgColor').value,
-    clockColor:   document.getElementById('settingClockColor').value,
-    textColor:    document.getElementById('settingTextColor').value,
-    chromakey:    document.getElementById('settingChromakey').checked,
-    viewerLayout: document.getElementById('settingViewerLayout').value,
-    clockStyle:   document.getElementById('settingClockStyle').value,
-    viewerFocus:  document.getElementById('settingViewerFocus').value,
+    showSeconds:      document.getElementById('settingShowSeconds').checked,
+    bgColor:          document.getElementById('settingBgColor').value,
+    clockColor:       document.getElementById('settingClockColor').value,
+    textColor:        document.getElementById('settingTextColor').value,
+    chromakey:        document.getElementById('settingChromakey').checked,
+    viewerLayout:     document.getElementById('settingViewerLayout').value,
+    clockStyle:       document.getElementById('settingClockStyle').value,
+    viewerFocus:      document.getElementById('settingViewerFocus').value,
+    customLayout:     document.getElementById('settingCustomLayout').checked,
+    elementPositions: settings.elementPositions,
   };
 }
 
@@ -1157,7 +1469,7 @@ function onSettingChange() {
 
 function resetSettingsToDefaults() {
   fetch(BASE + 'settings/reset', { method: 'POST' }).catch(() => {});
-  applySettings(DEFAULT_SETTINGS);
+  applySettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
 }
 
 // Initialise: viewer uses URL param if present, otherwise server state via SSE
@@ -1171,6 +1483,192 @@ function updateNavLinks() {
   const vwLink = document.getElementById('viewerLink');
   if (opLink) opLink.href = BASE + 'operator?s=' + s;
   if (vwLink) vwLink.href = BASE + '?s=' + s;
+}
+
+// ── Custom layout (viewer) ─────────────────────────────────────────────────
+function applyCustomLayout() {
+  const use = settings.customLayout;
+  document.body.classList.toggle('custom-layout', use);
+  if (!use) {
+    // clear any inline positioning
+    for (const id of ['vwTimer','vwStopwatch','vwTarget','vwMessage']) {
+      const el = document.getElementById(id);
+      if (el) { el.style.left = ''; el.style.top = ''; el.style.transform = ''; }
+    }
+    const cw = document.querySelector('.vw-clock');
+    if (cw) { cw.style.left = ''; cw.style.top = ''; cw.style.transform = ''; }
+    return;
+  }
+  const pos = settings.elementPositions;
+  const cw = document.querySelector('.vw-clock');
+  if (cw && pos.clock) {
+    cw.style.left = pos.clock.x + '%';
+    cw.style.top  = pos.clock.y + '%';
+    cw.style.transform = `translate(-50%, -50%) scale(${pos.clock.scale})`;
+  }
+  const widgetMap = { timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
+  for (const [key, id] of Object.entries(widgetMap)) {
+    const el = document.getElementById(id);
+    if (el && pos[key]) {
+      el.style.left = pos[key].x + '%';
+      el.style.top  = pos[key].y + '%';
+      el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
+    }
+  }
+}
+
+// ── Layout editor ──────────────────────────────────────────────────────────
+const LE_ELEMENTS = {
+  clock:      { label: 'Clock',       color: '#00e676' },
+  timer:      { label: 'Timer',       color: '#ffd600' },
+  stopwatch:  { label: 'Stopwatch',   color: '#4fc3f7' },
+  targetTime: { label: 'Target Time', color: '#ce93d8' },
+  message:    { label: 'Message',     color: '#ff9800' },
+};
+
+let _leDrag = null;
+let _leStageBuilt = false;
+
+function openLayoutEditor() {
+  const modal = document.getElementById('layoutModal');
+  if (!modal) return;
+  if (!_leStageBuilt) { buildLeStage(); _leStageBuilt = true; }
+  sizeLeStage();
+  updateLeStage();
+  updateLayoutEditorControls();
+  modal.style.display = 'flex';
+}
+
+function closeLayoutEditor() {
+  const modal = document.getElementById('layoutModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function onLeToggle() {
+  settings.customLayout = document.getElementById('leCustomLayout').checked;
+  const sp = document.getElementById('settingCustomLayout');
+  if (sp) sp.checked = settings.customLayout;
+  pushSettingsToServer();
+}
+
+function buildLeStage() {
+  const stage = document.getElementById('leStage');
+  if (!stage) return;
+  for (const [key, info] of Object.entries(LE_ELEMENTS)) {
+    const el = document.createElement('div');
+    el.className = 'le-el';
+    el.id = 'le-el-' + key;
+    el.dataset.key = key;
+    el.style.borderColor = info.color + '99';
+    el.style.background  = info.color + '11';
+    el.innerHTML = `<span class="le-el-label" style="color:${info.color}">${info.label}</span>`;
+    stage.appendChild(el);
+    el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
+    el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
+  }
+  stage.addEventListener('mousemove',  leDragMove);
+  stage.addEventListener('mouseup',    leDragEnd);
+  stage.addEventListener('mouseleave', leDragEnd);
+  stage.addEventListener('touchmove',  leDragMove, { passive: false });
+  stage.addEventListener('touchend',   leDragEnd);
+
+  window.addEventListener('resize', () => { if (document.getElementById('layoutModal').style.display !== 'none') sizeLeStage(); });
+}
+
+function sizeLeStage() {
+  const wrap = document.querySelector('.le-stage-wrap');
+  const stage = document.getElementById('leStage');
+  if (!wrap || !stage) return;
+  const wr = wrap.getBoundingClientRect();
+  const maxW = wr.width  - 40;
+  const maxH = wr.height - 40;
+  let w = maxW, h = maxW / (16 / 9);
+  if (h > maxH) { h = maxH; w = maxH * (16 / 9); }
+  stage.style.width  = Math.round(w) + 'px';
+  stage.style.height = Math.round(h) + 'px';
+}
+
+function getElemPos(key) {
+  const pos = settings.elementPositions || DEFAULT_ELEMENT_POSITIONS;
+  return { ...(DEFAULT_ELEMENT_POSITIONS[key] || { x: 50, y: 50, scale: 1 }), ...(pos[key] || {}) };
+}
+
+function setElemPos(key, updates) {
+  if (!settings.elementPositions) settings.elementPositions = JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS));
+  settings.elementPositions[key] = { ...getElemPos(key), ...updates };
+}
+
+function leStartDrag(e, key) {
+  e.preventDefault();
+  const stage = document.getElementById('leStage');
+  const sr = stage.getBoundingClientRect();
+  const cp = e.touches ? e.touches[0] : e;
+  const p = getElemPos(key);
+  _leDrag = { key, startX: cp.clientX, startY: cp.clientY, startPosX: p.x, startPosY: p.y, stageW: sr.width, stageH: sr.height };
+  const el = document.getElementById('le-el-' + key);
+  if (el) el.classList.add('dragging');
+}
+
+function leDragMove(e) {
+  if (!_leDrag) return;
+  e.preventDefault();
+  const cp = e.touches ? e.touches[0] : e;
+  const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+  const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
+  const nx = Math.max(2, Math.min(98, _leDrag.startPosX + dx));
+  const ny = Math.max(2, Math.min(98, _leDrag.startPosY + dy));
+  setElemPos(_leDrag.key, { x: nx, y: ny });
+  updateLeStage();
+  updateLayoutEditorControls();
+}
+
+function leDragEnd() {
+  if (!_leDrag) return;
+  document.querySelectorAll('.le-el').forEach(e => e.classList.remove('dragging'));
+  _leDrag = null;
+  // apply to viewer immediately and save
+  settings.elementPositions = { ...settings.elementPositions };
+  pushSettingsToServer();
+}
+
+function onScaleChange(key, val) {
+  setElemPos(key, { scale: parseFloat(val) });
+  updateLeStage();
+  updateLayoutEditorControls();
+  clearTimeout(_settingsPushTimer);
+  _settingsPushTimer = setTimeout(() => {
+    fetch(BASE + 'settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) }).catch(() => {});
+  }, 200);
+}
+
+function resetLayout() {
+  settings.elementPositions = JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS));
+  updateLeStage();
+  updateLayoutEditorControls();
+  pushSettingsToServer();
+}
+
+function updateLeStage() {
+  for (const key of Object.keys(LE_ELEMENTS)) {
+    const el = document.getElementById('le-el-' + key);
+    if (!el) continue;
+    const p = getElemPos(key);
+    el.style.left = p.x + '%';
+    el.style.top  = p.y + '%';
+    el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
+  }
+}
+
+function updateLayoutEditorControls() {
+  for (const key of Object.keys(LE_ELEMENTS)) {
+    const p = getElemPos(key);
+    const sr = document.getElementById('le-scale-' + key);
+    const sv = document.getElementById('le-scaleval-' + key);
+    const pv = document.getElementById('le-pos-' + key);
+    if (sr) sr.value = p.scale;
+    if (sv) sv.textContent = Math.round(p.scale * 100) + '%';
+    if (pv) pv.textContent = Math.round(p.x) + ' / ' + Math.round(p.y);
+  }
 }
 
 // ── Settings panel ─────────────────────────────────────────────────────────
