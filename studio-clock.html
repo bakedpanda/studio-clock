@@ -101,9 +101,6 @@ body.viewer.chromakey .top-right { display: none !important; }
   width: 100%;
 }
 
-/* Clock always visible */
-#vwClock { display: flex; }
-
 /* Clock area */
 .vw-clock {
   display: flex;
@@ -305,8 +302,6 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding: 10px;
-  flex: 1;
-  overflow-y: auto;
   align-content: start;
 }
 @media (max-width: 680px) { .op-grid { grid-template-columns: 1fr; } }
@@ -463,65 +458,7 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 }
 .op-textarea:focus { outline: none; border-color: #444; color: #fff; }
 
-/* ────────────────────────────────────────────────────
-   SETTINGS PANEL (viewer only)
-──────────────────────────────────────────────────── */
-#settingsPanel {
-  position: fixed;
-  top: 0; right: 0;
-  width: 300px;
-  height: 100%;
-  background: #0e0e0e;
-  border-left: 1px solid #1a1a1a;
-  z-index: 200;
-  overflow-y: auto;
-  transform: translateX(100%);
-  transition: transform 0.25s ease;
-}
-#settingsPanel.open { transform: translateX(0); }
-
-.sp-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid #1a1a1a;
-  position: sticky;
-  top: 0;
-  background: #0e0e0e;
-  z-index: 1;
-}
-.sp-title { font-size: 10px; letter-spacing: 3px; color: #444; text-transform: uppercase; }
-.sp-close {
-  background: none; border: none; color: #444; cursor: pointer;
-  padding: 4px 6px; font-size: 16px; line-height: 1; transition: color 0.15s;
-}
-.sp-close:hover { color: #fff; }
-
-.sp-body { padding: 16px; }
-.sp-section { margin-bottom: 20px; }
-.sp-section-title {
-  font-size: 9px; letter-spacing: 3px; color: #2a2a2a;
-  text-transform: uppercase; margin-bottom: 10px;
-}
-.sp-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 8px; margin-bottom: 10px;
-}
-.sp-label { font-size: 11px; color: #666; letter-spacing: 0.5px; flex: 1; }
-
-.sp-row select {
-  background: #181818; border: 1px solid #242424; border-radius: 4px;
-  color: #bbb; font-family: 'Roboto Mono', monospace; font-size: 11px;
-  padding: 6px 8px; width: 150px; color-scheme: dark;
-}
-.sp-row select:focus { outline: none; border-color: #444; }
-
-.sp-row input[type=color] {
-  background: #181818; border: 1px solid #242424; border-radius: 4px;
-  width: 34px; height: 28px; padding: 2px 3px; cursor: pointer; flex-shrink: 0;
-}
-
+/* ── shared helpers ── */
 .color-group { display: flex; align-items: center; gap: 5px; }
 .color-text {
   background: #181818; border: 1px solid #242424; border-radius: 4px;
@@ -530,22 +467,6 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 }
 .color-text:focus { outline: none; border-color: #555; color: #fff; }
 .color-text.invalid { border-color: #ff1744; color: #ff1744; }
-
-.sp-row input[type=checkbox] {
-  width: 16px; height: 16px; cursor: pointer; accent-color: #00e676; flex-shrink: 0;
-}
-
-.sp-divider { border: none; border-top: 1px solid #181818; margin: 16px 0; }
-.sp-hint { font-size: 10px; color: #2a2a2a; line-height: 1.6; letter-spacing: 0.3px; margin-top: 4px; }
-
-/* Presets */
-.preset-name-row { display: flex; gap: 6px; margin-bottom: 8px; }
-.preset-name-row input[type=text] {
-  background: #181818; border: 1px solid #242424; border-radius: 4px;
-  color: #fff; font-family: 'Roboto Mono', monospace; font-size: 12px;
-  padding: 8px 10px; flex: 1; min-width: 0;
-}
-.preset-name-row input:focus { outline: none; border-color: #444; }
 
 .btn-sm {
   background: #181818; border: 1px solid #242424; border-radius: 4px;
@@ -557,29 +478,159 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 .btn-sm.primary { background: #003d20; border-color: #00693a; color: #00e676; }
 .btn-sm.primary:hover { background: #004a28; }
 
+.preset-name-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.preset-name-row input[type=text] {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #fff; font-family: 'Roboto Mono', monospace; font-size: 12px;
+  padding: 8px 10px; flex: 1; min-width: 0;
+}
+.preset-name-row input:focus { outline: none; border-color: #444; }
 .copy-url-btn { width: 100%; margin-top: 2px; text-align: center; }
-
 .presets-list {
   list-style: none; display: flex; flex-direction: column;
-  gap: 5px; margin-top: 12px; max-height: 200px; overflow-y: auto;
+  gap: 5px; margin-top: 10px; max-height: 180px; overflow-y: auto;
 }
 .preset-item {
   display: flex; align-items: center; gap: 6px;
   background: #141414; border: 1px solid #1c1c1c; border-radius: 4px; padding: 7px 8px;
 }
-.preset-item-name {
-  flex: 1; font-size: 11px; color: #999; cursor: pointer;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.preset-item-name { flex: 1; font-size: 11px; color: #999; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .preset-item-name:hover { color: #fff; }
 .preset-item-link { color: #2a2a2a; font-size: 12px; text-decoration: none; flex-shrink: 0; }
 .preset-item-link:hover { color: #00e676; }
-.preset-item-delete {
-  color: #242424; cursor: pointer; font-size: 16px; line-height: 1;
-  background: none; border: none; padding: 0 2px; flex-shrink: 0; transition: color 0.15s;
-}
+.preset-item-delete { color: #242424; cursor: pointer; font-size: 16px; line-height: 1; background: none; border: none; padding: 0 2px; flex-shrink: 0; transition: color 0.15s; }
 .preset-item-delete:hover { color: #ff1744; }
 .no-presets { font-size: 10px; color: #242424; padding: 4px 0; }
+
+/* ────────────────────────────────────────────────────
+   OPERATOR SECTIONS (display settings + layout editor)
+──────────────────────────────────────────────────── */
+.op-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.op-section {
+  border-top: 1px solid #181818;
+}
+
+.op-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.op-section-header:hover { background: #0c0c0c; }
+
+.op-section-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #2a2a2a;
+  text-transform: uppercase;
+}
+
+.section-chevron {
+  font-size: 12px;
+  color: #2a2a2a;
+  transition: transform 0.2s;
+}
+.section-open .section-chevron { transform: rotate(180deg); }
+
+.op-section-body {
+  padding: 14px 14px 18px;
+}
+
+/* Display settings */
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.ds-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ds-group-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #2a2a2a;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #181818;
+  padding-bottom: 6px;
+}
+
+.ds-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ds-label {
+  font-size: 11px;
+  color: #555;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.ds-row select {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #bbb; font-family: 'Roboto Mono', monospace; font-size: 11px;
+  padding: 5px 7px; color-scheme: dark; cursor: pointer;
+}
+.ds-row select:focus { outline: none; border-color: #444; }
+
+.ds-row input[type=color] {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  width: 32px; height: 26px; padding: 2px 3px; cursor: pointer; flex-shrink: 0;
+}
+
+.ds-footer {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #181818;
+  margin-top: 4px;
+}
+
+/* Lock button */
+.lock-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #181818;
+  border: 1px solid #242424;
+  border-radius: 4px;
+  color: #555;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lock-btn:hover { background: #222; border-color: #444; color: #fff; }
+.lock-btn.unlocked { background: #1a2a1a; border-color: #2a4a2a; color: #00e676; }
+
+/* Locked state: dim and disable controls */
+.settings-locked .op-section-body {
+  position: relative;
+}
+.settings-locked .op-section-body::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: not-allowed;
+}
 
 /* ────────────────────────────────────────────────────
    CUSTOM LAYOUT — viewer absolute positioning
@@ -598,34 +649,8 @@ body.custom-layout .vw-el-value { white-space: nowrap; }
 body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center; }
 
 /* ────────────────────────────────────────────────────
-   LAYOUT EDITOR MODAL
+   LAYOUT EDITOR (inline)
 ──────────────────────────────────────────────────── */
-#layoutModal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 600;
-  background: #050505;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.le-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 18px;
-  border-bottom: 1px solid #1a1a1a;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-.le-title {
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: #444;
-  text-transform: uppercase;
-  margin-right: auto;
-}
 .le-enable-label {
   display: flex;
   align-items: center;
@@ -639,30 +664,21 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 .le-enable-label input[type=checkbox] { accent-color: #00e676; width: 14px; height: 14px; }
 .le-enable-label input:checked ~ span { color: #00e676; }
 
-.le-body {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-  min-height: 0;
-}
-
+/* 16:9 stage, fills width */
 .le-stage-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  min-width: 0;
-  min-height: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
   background: #080808;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
 #leStage {
-  position: relative;
-  background: #0a0a0a;
-  border: 1px solid #1e1e1e;
-  overflow: hidden;
-  /* aspect-ratio maintained via JS sizing */
+  position: absolute;
+  inset: 0;
 }
 
 .le-el {
@@ -683,70 +699,53 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 .le-el:hover    { box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
 .le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
 
-.le-sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  border-left: 1px solid #1a1a1a;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.le-ctrl {
-  background: #0e0e0e;
-  border: 1px solid #1c1c1c;
-  border-radius: 7px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
+/* Scale sliders below stage */
+.le-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
 }
-.le-ctrl-name {
+
+.le-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0e0e0e;
+  border: 1px solid #1c1c1c;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.le-slider-name {
   font-size: 9px;
   letter-spacing: 2px;
   text-transform: uppercase;
   font-weight: 700;
-}
-.le-ctrl-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.le-ctrl-lbl {
-  font-size: 9px;
-  color: #333;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  width: 36px;
+  width: 68px;
   flex-shrink: 0;
 }
+
 .le-scale-range {
   flex: 1;
   accent-color: #555;
   cursor: pointer;
+  min-width: 0;
 }
+
 .le-scale-val {
   font-size: 10px;
   color: #444;
-  width: 36px;
+  width: 34px;
   text-align: right;
   flex-shrink: 0;
 }
+
 .le-pos-val {
   font-size: 10px;
   color: #2a2a2a;
-  flex: 1;
+  width: 52px;
   text-align: right;
-}
-
-.le-hint {
-  font-size: 10px;
-  color: #2a2a2a;
-  line-height: 1.6;
-  letter-spacing: 0.3px;
-  margin-bottom: 6px;
+  flex-shrink: 0;
 }
 </style>
 </head>
@@ -766,211 +765,12 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 <!-- ── Top-right nav: operator ── -->
 <div class="top-right operator-only">
   <a class="nav-btn" id="viewerLink" href=".">Viewer</a>
-  <button class="icon-btn" onclick="toggleSettings()" title="Display Settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-  </button>
   <div class="op-status-item" style="background:rgba(20,20,20,0.92);border:1px solid #2a2a2a;border-radius:6px;padding:7px 12px;font-size:10px;letter-spacing:1px;color:#333;display:flex;align-items:center;gap:6px;">
     <span class="conn-dot" id="connDot"></span>
     <span id="syncStatus">syncing…</span>
   </div>
 </div>
 
-<!-- ── Layout editor modal ── -->
-<div id="layoutModal">
-  <div class="le-header">
-    <span class="le-title">Layout Editor</span>
-    <label class="le-enable-label">
-      <input type="checkbox" id="leCustomLayout" onchange="onLeToggle()">
-      <span>Custom Layout</span>
-    </label>
-    <button class="btn-sm" onclick="resetLayout()">Reset Positions</button>
-    <button class="btn-sm primary" onclick="closeLayoutEditor()">Done</button>
-  </div>
-  <div class="le-body">
-    <div class="le-stage-wrap">
-      <div id="leStage"></div>
-    </div>
-    <div class="le-sidebar">
-      <p class="le-hint">Drag elements on the stage to reposition. Use sliders to scale.</p>
-      <div class="le-ctrl">
-        <div class="le-ctrl-name" style="color:#00e676">Clock</div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">Scale</span>
-          <input type="range" class="le-scale-range" id="le-scale-clock" min="0.2" max="2.5" step="0.05" value="1" oninput="onScaleChange('clock',this.value)">
-          <span class="le-scale-val" id="le-scaleval-clock">100%</span>
-        </div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">X / Y</span>
-          <span class="le-pos-val" id="le-pos-clock">50 / 44</span>
-        </div>
-      </div>
-      <div class="le-ctrl">
-        <div class="le-ctrl-name" style="color:#ffd600">Timer</div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">Scale</span>
-          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
-          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
-        </div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">X / Y</span>
-          <span class="le-pos-val" id="le-pos-timer">20 / 76</span>
-        </div>
-      </div>
-      <div class="le-ctrl">
-        <div class="le-ctrl-name" style="color:#4fc3f7">Stopwatch</div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">Scale</span>
-          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
-          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
-        </div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">X / Y</span>
-          <span class="le-pos-val" id="le-pos-stopwatch">50 / 76</span>
-        </div>
-      </div>
-      <div class="le-ctrl">
-        <div class="le-ctrl-name" style="color:#ce93d8">Target Time</div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">Scale</span>
-          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
-          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
-        </div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">X / Y</span>
-          <span class="le-pos-val" id="le-pos-targetTime">80 / 76</span>
-        </div>
-      </div>
-      <div class="le-ctrl">
-        <div class="le-ctrl-name" style="color:#ff9800">Message</div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">Scale</span>
-          <input type="range" class="le-scale-range" id="le-scale-message" min="0.2" max="2.5" step="0.05" value="0.85" oninput="onScaleChange('message',this.value)">
-          <span class="le-scale-val" id="le-scaleval-message">85%</span>
-        </div>
-        <div class="le-ctrl-row">
-          <span class="le-ctrl-lbl">X / Y</span>
-          <span class="le-pos-val" id="le-pos-message">50 / 88</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── Settings panel (viewer only) ── -->
-<div id="settingsPanel" class="operator-only">
-  <div class="sp-header">
-    <span class="sp-title">Display Settings</span>
-    <button class="sp-close" onclick="toggleSettings()">✕</button>
-  </div>
-  <div class="sp-body">
-
-    <div class="sp-section">
-      <div class="sp-section-title">Layout</div>
-      <div class="sp-row">
-        <span class="sp-label">Widget panel</span>
-        <select id="settingViewerLayout" onchange="onSettingChange()">
-          <option value="auto">Auto</option>
-          <option value="sidebar">Sidebar</option>
-          <option value="column">Column</option>
-          <option value="row">Row</option>
-        </select>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">Clock style</span>
-        <select id="settingClockStyle" onchange="onSettingChange()">
-          <option value="analog">Analog</option>
-          <option value="digital">Digital</option>
-        </select>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">Seconds ring</span>
-        <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">Full-screen focus</span>
-        <select id="settingViewerFocus" onchange="onSettingChange()">
-          <option value="clock">Clock</option>
-          <option value="timer">Countdown Timer</option>
-          <option value="stopwatch">Stopwatch</option>
-        </select>
-      </div>
-    </div>
-
-    <hr class="sp-divider">
-
-    <div class="sp-section">
-      <div class="sp-section-title">Colours</div>
-      <div class="sp-row">
-        <span class="sp-label">Background</span>
-        <div class="color-group">
-          <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
-          <input type="text"  id="settingBgColorText" class="color-text" value="#0a0a0a" placeholder="#rrggbb / hsl / rgb"
-            onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
-        </div>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">Clock ring</span>
-        <div class="color-group">
-          <input type="color" id="settingClockColor" value="#00e676" oninput="onColorPickerChange('Clock')">
-          <input type="text"  id="settingClockColorText" class="color-text" value="#00e676" placeholder="#rrggbb / hsl / rgb"
-            onblur="onColorTextChange('Clock')" onkeydown="if(event.key==='Enter')onColorTextChange('Clock')">
-        </div>
-      </div>
-      <div class="sp-row">
-        <span class="sp-label">Text</span>
-        <div class="color-group">
-          <input type="color" id="settingTextColor" value="#ffffff" oninput="onColorPickerChange('Text')">
-          <input type="text"  id="settingTextColorText" class="color-text" value="#ffffff" placeholder="#rrggbb / hsl / rgb"
-            onblur="onColorTextChange('Text')" onkeydown="if(event.key==='Enter')onColorTextChange('Text')">
-        </div>
-      </div>
-    </div>
-
-    <hr class="sp-divider">
-
-    <div class="sp-section">
-      <div class="sp-section-title">Chromakey</div>
-      <div class="sp-row">
-        <span class="sp-label">Chromakey mode</span>
-        <input type="checkbox" id="settingChromakey" onchange="onSettingChange()">
-      </div>
-      <p class="sp-hint">Hides all UI chrome for clean video keying. Set your key colour using Background above.</p>
-    </div>
-
-    <hr class="sp-divider">
-
-    <div class="sp-section">
-      <div class="sp-section-title">Custom Layout</div>
-      <div class="sp-row">
-        <span class="sp-label">Enable custom positions</span>
-        <input type="checkbox" id="settingCustomLayout" onchange="onSettingChange()">
-      </div>
-      <button class="btn-sm" style="width:100%;text-align:center;margin-top:4px;" onclick="openLayoutEditor()">Edit Layout (16:9 Stage)</button>
-    </div>
-
-    <hr class="sp-divider">
-
-    <div class="sp-section">
-      <button class="btn-sm" style="width:100%;text-align:center;" onclick="resetSettingsToDefaults()">Reset to Defaults</button>
-    </div>
-
-    <hr class="sp-divider">
-
-    <div class="sp-section">
-      <div class="sp-section-title">Presets</div>
-      <div class="preset-name-row">
-        <input type="text" id="presetNameInput" placeholder="Preset name…" maxlength="80">
-        <button class="btn-sm primary" onclick="savePreset()">Save</button>
-      </div>
-      <button class="btn-sm copy-url-btn" onclick="copySettingsUrl()">Copy Viewer URL</button>
-      <ul class="presets-list" id="presetsList"></ul>
-    </div>
-
-  </div>
-</div>
 
 <!-- ════════════════════════════════════════════════════
      OPERATOR PAGE
@@ -982,6 +782,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
     <div class="op-date" id="opDate"></div>
   </div>
 
+  <div class="op-body">
   <div class="op-grid">
 
     <!-- Countdown Timer -->
@@ -998,7 +799,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
         <div class="op-display timer-idle" id="opTimerDisplay">00:00</div>
         <div class="op-input-row">
           <label>Label</label>
-          <input type="text" class="op-input full" id="timerLabel" placeholder="e.g. Half Time" maxlength="60"
+          <input type="text" class="op-input full" id="timerLabel" placeholder="Label…" maxlength="60"
             onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
         </div>
         <div class="op-input-row">
@@ -1037,7 +838,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
         <div class="op-display target-pending" id="opTargetDisplay">--:--</div>
         <div class="op-input-row">
           <label>Label</label>
-          <input type="text" class="op-input full" id="targetLabel" placeholder="e.g. Kick-off" maxlength="60"
+          <input type="text" class="op-input full" id="targetLabel" placeholder="Label…" maxlength="60"
             onblur="updateTargetTime()" onkeydown="if(event.key==='Enter')updateTargetTime()">
         </div>
         <div class="op-input-row">
@@ -1068,7 +869,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
         <div class="op-display sw-idle" id="opSwDisplay">00:00</div>
         <div class="op-input-row">
           <label>Label</label>
-          <input type="text" class="op-input full" id="swLabel" placeholder="e.g. On Air" maxlength="60"
+          <input type="text" class="op-input full" id="swLabel" placeholder="Label…" maxlength="60"
             onblur="updateSwConfig()" onkeydown="if(event.key==='Enter')updateSwConfig()">
         </div>
         <div class="btn-row">
@@ -1100,7 +901,150 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
       </div>
     </div>
 
+  </div><!-- end op-grid -->
+
+  <!-- ── Display Settings ── -->
+  <div class="op-section" id="displaySettingsSection">
+    <div class="op-section-header" onclick="toggleDisplaySettings()">
+      <span class="op-section-title">Display Settings</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="lock-btn" id="settingsLockBtn" onclick="event.stopPropagation();toggleSettingsLock()" title="Toggle lock">
+          <svg id="lockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span id="lockLabel">Locked</span>
+        </button>
+        <span class="section-chevron" id="displaySettingsChevron">▾</span>
+      </div>
+    </div>
+    <div class="op-section-body" id="displaySettingsBody" style="display:none">
+      <div class="ds-grid">
+        <div class="ds-group">
+          <div class="ds-group-title">Appearance</div>
+          <div class="ds-row">
+            <span class="ds-label">Clock style</span>
+            <select id="settingClockStyle" onchange="onSettingChange()">
+              <option value="analog">Analog</option>
+              <option value="digital">Digital</option>
+            </select>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Seconds ring</span>
+            <label class="sw-toggle">
+              <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
+              <span class="sw-track"></span>
+            </label>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Focus mode</span>
+            <select id="settingViewerFocus" onchange="onSettingChange()">
+              <option value="clock">Clock</option>
+              <option value="timer">Countdown Timer</option>
+              <option value="stopwatch">Stopwatch</option>
+            </select>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Chromakey</span>
+            <label class="sw-toggle">
+              <input type="checkbox" id="settingChromakey" onchange="onSettingChange()">
+              <span class="sw-track"></span>
+            </label>
+          </div>
+        </div>
+        <div class="ds-group">
+          <div class="ds-group-title">Colours</div>
+          <div class="ds-row">
+            <span class="ds-label">Background</span>
+            <div class="color-group">
+              <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
+              <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
+            </div>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Clock ring</span>
+            <div class="color-group">
+              <input type="color" id="settingClockColor" value="#00e676" oninput="onColorPickerChange('Clock')">
+              <input type="text" id="settingClockColorText" class="color-text" value="#00e676" onblur="onColorTextChange('Clock')" onkeydown="if(event.key==='Enter')onColorTextChange('Clock')">
+            </div>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Text</span>
+            <div class="color-group">
+              <input type="color" id="settingTextColor" value="#ffffff" oninput="onColorPickerChange('Text')">
+              <input type="text" id="settingTextColorText" class="color-text" value="#ffffff" onblur="onColorTextChange('Text')" onkeydown="if(event.key==='Enter')onColorTextChange('Text')">
+            </div>
+          </div>
+        </div>
+        <div class="ds-group">
+          <div class="ds-group-title">Presets</div>
+          <div class="preset-name-row">
+            <input type="text" id="presetNameInput" placeholder="Preset name…" maxlength="80">
+            <button class="btn-sm primary" onclick="savePreset()">Save</button>
+          </div>
+          <button class="btn-sm copy-url-btn" onclick="copySettingsUrl()">Copy Viewer URL</button>
+          <ul class="presets-list" id="presetsList"></ul>
+        </div>
+      </div>
+      <div class="ds-footer">
+        <button class="btn danger" onclick="resetSettingsToDefaults()">Reset to Defaults</button>
+      </div>
+    </div>
   </div>
+
+  <!-- ── Layout Editor ── -->
+  <div class="op-section" id="layoutEditorSection">
+    <div class="op-section-header" onclick="toggleLayoutEditor()">
+      <span class="op-section-title">Layout Editor</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <label class="le-enable-label" onclick="event.stopPropagation()">
+          <input type="checkbox" id="leCustomLayout" onchange="onLeToggle()">
+          <span>Custom Layout</span>
+        </label>
+        <button class="btn-sm" onclick="event.stopPropagation();resetLayout()">Reset</button>
+        <span class="section-chevron" id="layoutEditorChevron">▾</span>
+      </div>
+    </div>
+    <div class="op-section-body" id="layoutEditorBody" style="display:none">
+      <div class="le-stage-wrap">
+        <div id="leStage"></div>
+      </div>
+      <div class="le-sliders">
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#00e676">Clock</span>
+          <input type="range" class="le-scale-range" id="le-scale-clock" min="0.2" max="2.5" step="0.05" value="1" oninput="onScaleChange('clock',this.value)">
+          <span class="le-scale-val" id="le-scaleval-clock">100%</span>
+          <span class="le-pos-val" id="le-pos-clock">50/44</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ffd600">Timer</span>
+          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
+          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
+          <span class="le-pos-val" id="le-pos-timer">20/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#4fc3f7">Stopwatch</span>
+          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
+          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
+          <span class="le-pos-val" id="le-pos-stopwatch">50/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ce93d8">Target</span>
+          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
+          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
+          <span class="le-pos-val" id="le-pos-targetTime">80/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ff9800">Message</span>
+          <input type="range" class="le-scale-range" id="le-scale-message" min="0.2" max="2.5" step="0.05" value="0.85" oninput="onScaleChange('message',this.value)">
+          <span class="le-scale-val" id="le-scaleval-message">85%</span>
+          <span class="le-pos-val" id="le-pos-message">50/88</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- end op-body -->
 </div>
 
 <!-- ════════════════════════════════════════════════════
@@ -1238,13 +1182,11 @@ function applySettings(s) {
 
   // Sync settings panel controls (operator page)
   const el = id => document.getElementById(id);
-  const sc = el('settingShowSeconds');   if (sc) sc.checked = settings.showSeconds;
-  const ck = el('settingChromakey');     if (ck) ck.checked = settings.chromakey;
-  const vl = el('settingViewerLayout');  if (vl) vl.value   = settings.viewerLayout;
-  const cs = el('settingClockStyle');    if (cs) cs.value   = settings.clockStyle;
-  const vf = el('settingViewerFocus');   if (vf) vf.value   = settings.viewerFocus;
-  const cl = el('settingCustomLayout');  if (cl) cl.checked = settings.customLayout;
-  const le = el('leCustomLayout');       if (le) le.checked = settings.customLayout;
+  const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
+  const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
+  const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
+  const vf = el('settingViewerFocus');  if (vf) vf.value   = settings.viewerFocus;
+  const le = el('leCustomLayout');      if (le) le.checked = settings.customLayout;
   setColorPair('Bg',    settings.bgColor);
   setColorPair('Clock', settings.clockColor);
   setColorPair('Text',  settings.textColor);
@@ -1254,16 +1196,17 @@ function applySettings(s) {
 }
 
 function readSettingsFromPanel() {
+  const g = id => document.getElementById(id);
   return {
-    showSeconds:      document.getElementById('settingShowSeconds').checked,
-    bgColor:          document.getElementById('settingBgColor').value,
-    clockColor:       document.getElementById('settingClockColor').value,
-    textColor:        document.getElementById('settingTextColor').value,
-    chromakey:        document.getElementById('settingChromakey').checked,
-    viewerLayout:     document.getElementById('settingViewerLayout').value,
-    clockStyle:       document.getElementById('settingClockStyle').value,
-    viewerFocus:      document.getElementById('settingViewerFocus').value,
-    customLayout:     document.getElementById('settingCustomLayout').checked,
+    showSeconds:      g('settingShowSeconds')?.checked ?? settings.showSeconds,
+    bgColor:          g('settingBgColor')?.value       ?? settings.bgColor,
+    clockColor:       g('settingClockColor')?.value    ?? settings.clockColor,
+    textColor:        g('settingTextColor')?.value     ?? settings.textColor,
+    chromakey:        g('settingChromakey')?.checked   ?? settings.chromakey,
+    viewerLayout:     settings.viewerLayout,
+    clockStyle:       g('settingClockStyle')?.value    ?? settings.clockStyle,
+    viewerFocus:      g('settingViewerFocus')?.value   ?? settings.viewerFocus,
+    customLayout:     settings.customLayout,
     elementPositions: settings.elementPositions,
   };
 }
@@ -1338,29 +1281,28 @@ const LE_ELEMENTS = {
 
 let _leDrag = null;
 let _leStageBuilt = false;
-
 let _leRefreshInterval = null;
-function openLayoutEditor() {
-  const modal = document.getElementById('layoutModal');
-  if (!modal) return;
-  if (!_leStageBuilt) { buildLeStage(); _leStageBuilt = true; }
-  sizeLeStage();
-  updateLeStage();
-  updateLayoutEditorControls();
-  modal.style.display = 'flex';
-  _leRefreshInterval = setInterval(updateLeStage, 500);
-}
 
-function closeLayoutEditor() {
-  const modal = document.getElementById('layoutModal');
-  if (modal) modal.style.display = 'none';
-  if (_leRefreshInterval) { clearInterval(_leRefreshInterval); _leRefreshInterval = null; }
+function toggleLayoutEditor() {
+  const body = document.getElementById('layoutEditorBody');
+  const section = document.getElementById('layoutEditorSection');
+  const chev = document.getElementById('layoutEditorChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  if (!open) {
+    if (!_leStageBuilt) { buildLeStage(); _leStageBuilt = true; }
+    updateLeStage();
+    updateLayoutEditorControls();
+    if (!_leRefreshInterval) _leRefreshInterval = setInterval(updateLeStage, 500);
+  } else {
+    if (_leRefreshInterval) { clearInterval(_leRefreshInterval); _leRefreshInterval = null; }
+  }
 }
 
 function onLeToggle() {
   settings.customLayout = document.getElementById('leCustomLayout').checked;
-  const sp = document.getElementById('settingCustomLayout');
-  if (sp) sp.checked = settings.customLayout;
   pushSettingsToServer();
 }
 
@@ -1384,20 +1326,11 @@ function buildLeStage() {
   stage.addEventListener('touchmove',  leDragMove, { passive: false });
   stage.addEventListener('touchend',   leDragEnd);
 
-  window.addEventListener('resize', () => { if (document.getElementById('layoutModal').style.display !== 'none') sizeLeStage(); });
+  window.addEventListener('resize', () => { if (_leStageBuilt) updateLeStage(); });
 }
 
 function sizeLeStage() {
-  const wrap = document.querySelector('.le-stage-wrap');
-  const stage = document.getElementById('leStage');
-  if (!wrap || !stage) return;
-  const wr = wrap.getBoundingClientRect();
-  const maxW = wr.width  - 40;
-  const maxH = wr.height - 40;
-  let w = maxW, h = maxW / (16 / 9);
-  if (h > maxH) { h = maxH; w = maxH * (16 / 9); }
-  stage.style.width  = Math.round(w) + 'px';
-  stage.style.height = Math.round(h) + 'px';
+  // Stage sized via CSS aspect-ratio: 16/9 — no JS sizing needed
 }
 
 function getElemPos(key) {
@@ -1461,16 +1394,14 @@ function resetLayout() {
 }
 
 function lePreviewContent(key) {
-  // Return { text, fontSize (as % of stage height) } for each element
   const stageEl = document.getElementById('leStage');
-  const stageH = stageEl ? stageEl.offsetHeight : 270;
-  // Font sizes mirror viewer proportions (16vh / 18vh / 24vh of viewer height mapped to stage)
+  const stageH = stageEl ? stageEl.getBoundingClientRect().height : 200;
   switch (key) {
-    case 'clock':      return { text: document.getElementById('timeDisplay')?.textContent || '00:00:00', fs: stageH * 0.23 };
-    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: stageH * 0.24 };
-    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: stageH * 0.24 };
-    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: stageH * 0.24 };
-    case 'message':    return { text: document.getElementById('vwMsgText')?.textContent    || 'Message',  fs: stageH * 0.18 };
+    case 'clock':      return { text: document.getElementById('timeDisplay')?.textContent || '00:00:00', fs: stageH * 0.22 };
+    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: stageH * 0.22 };
+    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: stageH * 0.22 };
+    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: stageH * 0.22 };
+    case 'message':    return { text: document.getElementById('vwMsgText')?.textContent    || 'Message',  fs: stageH * 0.16 };
     default:           return { text: key, fs: stageH * 0.20 };
   }
 }
@@ -1500,11 +1431,36 @@ function updateLayoutEditorControls() {
   }
 }
 
-// ── Settings panel ─────────────────────────────────────────────────────────
-function toggleSettings() {
-  const p = document.getElementById('settingsPanel');
-  p.classList.toggle('open');
-  if (p.classList.contains('open')) renderPresetsList();
+// ── Display settings section ───────────────────────────────────────────────
+let _settingsLocked = true;
+
+function toggleDisplaySettings() {
+  const body = document.getElementById('displaySettingsBody');
+  const chev = document.getElementById('displaySettingsChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  if (!open) { renderPresetsList(); applyLockState(); }
+}
+
+function toggleSettingsLock() {
+  _settingsLocked = !_settingsLocked;
+  const btn = document.getElementById('settingsLockBtn');
+  const lbl = document.getElementById('lockLabel');
+  const body = document.getElementById('displaySettingsBody');
+  if (btn)  btn.classList.toggle('unlocked', !_settingsLocked);
+  if (lbl)  lbl.textContent = _settingsLocked ? 'Locked' : 'Unlocked';
+  if (body) body.style.pointerEvents = _settingsLocked ? 'none' : '';
+  if (body) body.style.opacity       = _settingsLocked ? '0.45' : '';
+}
+
+// Apply lock state on section open (body may have just been made visible)
+function applyLockState() {
+  const body = document.getElementById('displaySettingsBody');
+  if (!body || body.style.display === 'none') return;
+  body.style.pointerEvents = _settingsLocked ? 'none' : '';
+  body.style.opacity       = _settingsLocked ? '0.45' : '';
 }
 
 // ── Presets ────────────────────────────────────────────────────────────────
@@ -1761,18 +1717,18 @@ function renderWidgets() {
   const vwSV = document.getElementById('vwSwValue');
   const vwTG = document.getElementById('vwTargetValue');
 
-  if (vwTV) { vwTV.textContent = fmtMsCeil(timerMs); vwTV.className = 'vw-widget-value ' + tCls; }
-  if (vwSV) { vwSV.textContent = fmtMsFloor(swMs);   vwSV.className = 'vw-widget-value ' + sCls; }
+  if (vwTV) { vwTV.textContent = fmtMsCeil(timerMs); vwTV.className = 'vw-el-value ' + tCls; }
+  if (vwSV) { vwSV.textContent = fmtMsFloor(swMs);   vwSV.className = 'vw-el-value ' + sCls; }
 
   if (vwTG) {
     if (sseTargetTime.enabled && sseTargetTime.target) {
       const diff = calcTargetMs(sseTargetTime.target);
-      if (diff === null) { vwTG.textContent = '--:--'; vwTG.className = 'vw-widget-value target-pending'; }
-      else if (diff >= 0) { vwTG.textContent = fmtMsCeil(diff); vwTG.className = 'vw-widget-value target-pending'; }
-      else { vwTG.textContent = '+' + fmtMsFloor(-diff); vwTG.className = 'vw-widget-value target-elapsed'; }
+      if (diff === null) { vwTG.textContent = '--:--'; vwTG.className = 'vw-el-value target-pending'; }
+      else if (diff >= 0) { vwTG.textContent = fmtMsCeil(diff); vwTG.className = 'vw-el-value target-pending'; }
+      else { vwTG.textContent = '+' + fmtMsFloor(-diff); vwTG.className = 'vw-el-value target-elapsed'; }
     } else {
       vwTG.textContent = sseTargetTime.target || '--:--';
-      vwTG.className = 'vw-widget-value target-pending';
+      vwTG.className = 'vw-el-value target-pending';
     }
   }
 
