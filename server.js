@@ -102,7 +102,7 @@ const displaySettings = {
   textColor:    '#ffffff',
   chromakey:    false,
   viewerLayout: 'auto',
-  clockStyle:   'analog',
+  clockStyle:   'digital',
   viewerFocus:  'clock',
 };
 
@@ -264,7 +264,7 @@ const server = http.createServer((req, res) => {
     });
   }
   if (req.method === 'POST' && pathname === '/settings/reset') {
-    Object.assign(displaySettings, { showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff', chromakey: false, viewerLayout: 'auto', clockStyle: 'analog', viewerFocus: 'clock' });
+    Object.assign(displaySettings, { showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff', chromakey: false, viewerLayout: 'auto', clockStyle: 'digital', viewerFocus: 'clock' });
     saveState();
     broadcast(snapshot());
     return noContent(res);
