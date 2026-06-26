@@ -77,6 +77,30 @@ body.viewer   .operator-only { display: none !important; }
 body.chromakey .top-right     { display: none !important; }
 body.chromakey #settingsPanel  { display: none !important; }
 
+/* Chromakey viewer: all elements float on plain bg, no layout chrome */
+body.chromakey .vw-page {
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 36px;
+  padding: 40px;
+}
+body.chromakey .vw-clock { flex: none; }
+body.chromakey .vw-widgets {
+  flex-direction: column !important;
+  width: auto !important;
+  max-width: 100% !important;
+  border: none !important;
+  overflow: visible !important;
+  align-items: center;
+  gap: 12px;
+}
+body.chromakey .vw-widget.visible { max-height: 300px !important; width: auto; }
+body.chromakey .vw-widget-inner   { border: none !important; padding: 0 !important; text-align: center; }
+body.chromakey .vw-widget-label   { color: rgba(255,255,255,0.3); }
+body.chromakey .vw-widget-value   { font-size: clamp(36px, 6vw, 88px) !important; }
+body.chromakey .vw-message-text   { text-align: center; }
+
 /* ────────────────────────────────────────────────────
    VIEWER PAGE
 ──────────────────────────────────────────────────── */
@@ -92,14 +116,14 @@ body.chromakey #settingsPanel  { display: none !important; }
   body.layout-sidebar .vw-page { flex-direction: row; }
 
   body:not(.layout-column):not(.layout-row),
-  body.layout-sidebar { --clock-size: min(calc(100vh - 16px), calc(100vw - 240px)); }
+  body.layout-sidebar { --clock-size: min(calc(100vh - 16px), calc(100vw - 300px)); }
 
   body:not(.layout-column):not(.layout-row) .vw-widgets,
   body.layout-sidebar .vw-widgets {
-    width: 220px;
+    width: 280px;
     flex-shrink: 0;
     flex-direction: column;
-    border-left: 1px solid #181818;
+    border-left: 2px solid #1e1e1e;
     overflow-y: auto;
   }
 }
@@ -121,24 +145,24 @@ body.chromakey #settingsPanel  { display: none !important; }
 /* Explicit layouts */
 body.layout-sidebar .vw-page { flex-direction: row; }
 body.layout-sidebar .vw-widgets {
-  width: 220px; flex-shrink: 0; flex-direction: column;
-  border-left: 1px solid #181818; overflow-y: auto;
+  width: 280px; flex-shrink: 0; flex-direction: column;
+  border-left: 2px solid #1e1e1e; overflow-y: auto;
 }
-body.layout-sidebar { --clock-size: min(calc(100vh - 16px), calc(100vw - 240px)); }
+body.layout-sidebar { --clock-size: min(calc(100vh - 16px), calc(100vw - 300px)); }
 
 body.layout-column .vw-page { flex-direction: column; }
 body.layout-column .vw-widgets {
   width: 100%; flex-direction: column; flex-shrink: 0;
-  border-top: 1px solid #181818; overflow-y: auto;
+  border-top: 2px solid #1e1e1e; overflow-y: auto;
 }
 
 body.layout-row .vw-page { flex-direction: column; }
 body.layout-row .vw-widgets {
   width: 100%; flex-direction: row; flex-shrink: 0;
-  border-top: 1px solid #181818; overflow-x: auto;
+  border-top: 2px solid #1e1e1e; overflow-x: auto;
 }
-body.layout-row .vw-widget.visible { max-height: none; flex: 1; min-width: 140px; }
-body.layout-row .vw-widget-inner { border-bottom: none; border-right: 1px solid #181818; }
+body.layout-row .vw-widget.visible { max-height: none; flex: 1; min-width: 180px; }
+body.layout-row .vw-widget-inner { border-bottom: none; border-right: 2px solid #1e1e1e; }
 
 /* Clock area */
 .vw-clock {
@@ -200,6 +224,10 @@ canvas#clock {
 .sync-indicator.synced  { color: #00e676; }
 .sync-indicator.syncing { color: #ffb300; }
 .sync-indicator.error   { color: #ff1744; }
+
+/* Hide date and NTP status on viewer — operator-only info */
+body.viewer .date-display,
+body.viewer .sync-indicator { display: none; }
 
 /* ── Digital clock style ── */
 body.clock-digital canvas#clock { display: none !important; }
@@ -283,41 +311,42 @@ body.focus-stopwatch #vwMessage { display: none !important; }
   flex-shrink: 0;
 }
 .vw-widget.visible {
-  max-height: 180px;
+  max-height: 260px;
   opacity: 1;
   transform: translateY(0);
 }
 
 .vw-widget-inner {
-  padding: 14px 16px;
-  border-bottom: 1px solid #141414;
+  padding: 22px 24px;
+  border-bottom: 2px solid #1e1e1e;
 }
 
 .vw-widget-label {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 3px;
-  color: #333;
+  color: #444;
   text-transform: uppercase;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 .vw-widget-value {
-  font-size: clamp(22px, 3.5vw, 48px);
+  font-size: clamp(44px, 7vw, 96px);
   font-weight: 700;
   letter-spacing: 0.05em;
-  line-height: 1.1;
+  line-height: 1.05;
   transition: color 0.3s;
 }
 
-body.layout-sidebar .vw-widget-value,
-body:not(.layout-column):not(.layout-row) .vw-widget-value {
-  font-size: clamp(18px, 2.4vw, 32px);
+/* Sidebar is narrower — constrain font so HH:MM:SS fits */
+@media (orientation: landscape) {
+  body:not(.layout-column):not(.layout-row) .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
 }
+body.layout-sidebar .vw-widget-value { font-size: clamp(28px, 3.6vw, 56px); }
 
 .vw-message-text {
-  font-size: clamp(13px, 2vw, 20px);
+  font-size: clamp(20px, 3.5vw, 44px);
   color: #fff;
-  line-height: 1.45;
+  line-height: 1.4;
   word-break: break-word;
   white-space: pre-wrap;
 }
@@ -693,12 +722,6 @@ body:not(.layout-column):not(.layout-row) .vw-widget-value {
 <!-- ── Top-right nav: viewer ── -->
 <div class="top-right viewer-only">
   <a class="nav-btn" id="operatorLink" href="operator">Operator</a>
-  <button class="icon-btn" onclick="toggleSettings()" title="Settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-  </button>
   <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
     <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
@@ -710,6 +733,12 @@ body:not(.layout-column):not(.layout-row) .vw-widget-value {
 <!-- ── Top-right nav: operator ── -->
 <div class="top-right operator-only">
   <a class="nav-btn" id="viewerLink" href=".">Viewer</a>
+  <button class="icon-btn" onclick="toggleSettings()" title="Display Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
   <div class="op-status-item" style="background:rgba(20,20,20,0.92);border:1px solid #2a2a2a;border-radius:6px;padding:7px 12px;font-size:10px;letter-spacing:1px;color:#333;display:flex;align-items:center;gap:6px;">
     <span class="conn-dot" id="connDot"></span>
     <span id="syncStatus">syncing…</span>
@@ -717,7 +746,7 @@ body:not(.layout-column):not(.layout-row) .vw-widget-value {
 </div>
 
 <!-- ── Settings panel (viewer only) ── -->
-<div id="settingsPanel" class="viewer-only">
+<div id="settingsPanel" class="operator-only">
   <div class="sp-header">
     <span class="sp-title">Display Settings</span>
     <button class="sp-close" onclick="toggleSettings()">✕</button>
@@ -805,7 +834,7 @@ body:not(.layout-column):not(.layout-row) .vw-widget-value {
         <input type="text" id="presetNameInput" placeholder="Preset name…" maxlength="80">
         <button class="btn-sm primary" onclick="savePreset()">Save</button>
       </div>
-      <button class="btn-sm copy-url-btn" onclick="copySettingsUrl()">Copy URL</button>
+      <button class="btn-sm copy-url-btn" onclick="copySettingsUrl()">Copy Viewer URL</button>
       <ul class="presets-list" id="presetsList"></ul>
     </div>
 
@@ -1179,7 +1208,7 @@ async function renderPresetsList() {
 }
 
 function copySettingsUrl() {
-  const url = location.origin + location.pathname + '?s=' + encodeSettings(settings);
+  const url = location.origin + BASE + '?s=' + encodeSettings(settings);
   const btn = document.querySelector('.copy-url-btn');
   navigator.clipboard.writeText(url)
     .then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy URL', 1500); })
