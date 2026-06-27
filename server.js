@@ -116,7 +116,7 @@ const displaySettings = {
     timer:      { x: 16, y: 50, scale: 0.7 },
     stopwatch:  { x: 50, y: 76, scale: 0.9 },
     targetTime: { x: 50, y: 50, scale: 0.7 },
-    message:    { x: 50, y: 80, scale: 0.8, width: 100, height: 37 },
+    message:    { x: 50, y: 50, scale: 1.0, width: 60, height: 20 },
   },
 };
 

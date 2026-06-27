@@ -975,9 +975,10 @@ body.custom-layout .vw-message-text {
         </div>
         <div class="le-slider-row">
           <span class="le-slider-name" style="color:#ff9800">Message</span>
-          <input type="range" class="le-scale-range" id="le-scale-message" min="0.2" max="2.5" step="0.05" value="0.85" oninput="onScaleChange('message',this.value)">
-          <span class="le-scale-val" id="le-scaleval-message">85%</span>
-          <span class="le-pos-val" id="le-pos-message">50/88</span>
+          <input type="range" class="le-scale-range" id="le-scale-message" min="0.1" max="1.0" step="0.05" value="1.0" oninput="onScaleChange('message',this.value)">
+          <span class="le-scale-val" id="le-scaleval-message">100%</span>
+          <button class="btn-sm" onclick="fitMessageScale()" style="margin-left:4px;padding:2px 6px;font-size:11px">Fit</button>
+          <span class="le-pos-val" id="le-pos-message">50/50</span>
         </div>
       </div>
     </div>
@@ -1108,7 +1109,7 @@ const DEFAULT_ELEMENT_POSITIONS = {
   timer:      { x: 16, y: 50,  scale: 0.7  },
   stopwatch:  { x: 50, y: 76,  scale: 0.9  },
   targetTime: { x: 50, y: 50,  scale: 0.7  },
-  message:    { x: 50, y: 80,  scale: 0.8,  width: 100, height: 37 },
+  message:    { x: 50, y: 50,  scale: 1.0,  width: 60, height: 20 },
 };
 
 const DEFAULT_SETTINGS = {
@@ -1288,10 +1289,9 @@ function applyCustomLayout() {
       const mh = pos[key].height ?? 20;
       el.style.width  = mw + '%';
       el.style.height = mh + '%';
-      el.style.setProperty('--msg-scale',  pos[key].scale ?? 1.0);
       el.style.setProperty('--msg-box-w',  mw + 'vw');
       el.style.setProperty('--msg-box-h',  mh + 'vh');
-      fitMessageToBox();
+      fitMessageToBox(pos[key].scale ?? 1.0);
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
       el.style.width  = '';
@@ -1300,14 +1300,15 @@ function applyCustomLayout() {
   }
 }
 
-function fitMessageToBox() {
+function fitMessageToBox(scale) {
   const box = document.getElementById('vwMessage');
   const txt = box?.querySelector('.vw-message-text');
   if (!box || !txt) return;
-  txt.style.fontSize = '';  // let CSS compute the initial size
-  // Binary search: shrink until text fits inside the box
-  let lo = 6, hi = parseFloat(getComputedStyle(txt).fontSize);
-  for (let i = 0; i < 12; i++) {
+  const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
+  txt.style.fontSize = '';
+  // Binary search: find the max size that fits the box, then apply scale fraction
+  let lo = 6, hi = parseFloat(getComputedStyle(txt).fontSize) * 2;
+  for (let i = 0; i < 14; i++) {
     const mid = (lo + hi) / 2;
     txt.style.fontSize = mid + 'px';
     if (txt.scrollHeight > box.clientHeight || txt.scrollWidth > box.clientWidth) {
@@ -1316,7 +1317,17 @@ function fitMessageToBox() {
       lo = mid;
     }
   }
-  txt.style.fontSize = Math.floor(lo) + 'px';
+  txt.style.fontSize = Math.floor(lo * s) + 'px';
+}
+
+function fitMessageScale() {
+  setElemPos('message', { scale: 1.0 });
+  const slider = document.getElementById('le-scale-message');
+  if (slider) slider.value = 1.0;
+  const val = document.getElementById('le-scaleval-message');
+  if (val) val.textContent = '100%';
+  applyCustomLayout();
+  pushSettingsToServer();
 }
 
 // ── Layout editor ──────────────────────────────────────────────────────────
