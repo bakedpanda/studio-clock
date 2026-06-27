@@ -1015,6 +1015,9 @@ body.custom-layout .vw-message-text {
             <div class="color-group">
               <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
               <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
+              <button title="Black" onclick="setColorPair('Bg','#000000');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#000000;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+              <button title="White" onclick="setColorPair('Bg','#ffffff');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#ffffff;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+              <button title="Chroma green" onclick="setColorPair('Bg','#00b140');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#00b140;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
             </div>
           </div>
           <div class="ds-row">
@@ -1162,7 +1165,9 @@ function onColorPickerChange(key) {
 
 function onColorTextChange(key) {
   const input = document.getElementById('setting' + key + 'ColorText');
-  const hex = cssColorToHex(input.value);
+  let val = input.value.trim();
+  if (/^[0-9a-fA-F]{3,6}$/.test(val)) { val = '#' + val; input.value = val; }
+  const hex = cssColorToHex(val);
   if (hex) { setColorPair(key, hex); onSettingChange(); }
   else input.classList.add('invalid');
 }
