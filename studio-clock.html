@@ -8,327 +8,765 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* --clock-size drives all proportional sizing */
-  :root { --clock-size: min(480px, 92vw); }
+:root {
+  --bg-color:        #0a0a0a;
+  --clock-color:     #00e676;
+  --text-color:      #ffffff;
+  --clock-size:      min(min(92vw, 92vh), 480px);
+  --timer-color:     #ffd600;
+  --stopwatch-color: #4fc3f7;
+  --target-color:    #ffffff;
+  --message-color:   #ffffff;
+}
 
-  html, body { height: 100%; }
+html, body { height: 100%; overflow: hidden; }
 
-  body {
-    background: #0a0a0a;
-    color: #fff;
-    font-family: 'Roboto Mono', monospace;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100%;
-    padding: 16px;
-    gap: 20px;
-    user-select: none;
-    overflow-y: auto;
-  }
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Roboto Mono', monospace;
+  height: 100%;
+  user-select: none;
+}
 
-  /* ── Clock ── */
-  .clock-wrapper {
-    position: relative;
-    width: var(--clock-size);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
+/* ── Mode visibility ── */
+body.operator .viewer-only  { display: none !important; }
+body.viewer   .operator-only { display: none !important; }
 
-  .clock-face {
-    position: relative;
-    width: var(--clock-size);
-    height: var(--clock-size);
-    flex-shrink: 0;
-  }
+/* ── Top-right nav ── */
+.top-right {
+  position: fixed;
+  top: 12px; right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
 
-  canvas#clock {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;   /* CSS scale — canvas attrs stay 480x480 for quality */
-    height: 100%;
-  }
+/* Viewer: hide buttons until cursor is near top-right corner */
+body.viewer .top-right {
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+body.viewer .top-right.corner-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
 
-  .clock-center {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-    width: 70%;
-    transition: top 0.4s ease;
-  }
+.nav-btn {
+  background: rgba(20,20,20,0.92);
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-btn:hover { color: #fff; border-color: #555; }
 
-  .time-display {
-    font-size: calc(var(--clock-size) * 0.108);
-    font-weight: bold;
-    letter-spacing: 0.07em;
-    color: #ffffff;
-    text-shadow: 0 0 20px rgba(255,255,255,0.3);
-    white-space: nowrap;
-  }
+.icon-btn {
+  background: rgba(20,20,20,0.92);
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  padding: 8px;
+  line-height: 0;
+  transition: color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:hover { color: #fff; border-color: #555; }
+.icon-btn svg { width: 18px; height: 18px; }
 
-  .date-display {
-    font-size: calc(var(--clock-size) * 0.027);
-    color: #666;
-    letter-spacing: 0.15em;
-    margin-top: 0.4em;
-    text-transform: uppercase;
-  }
+/* Operator page always uses its own dark background */
+body.operator { background: #0a0a0a !important; }
 
-  .sync-indicator {
-    font-size: calc(var(--clock-size) * 0.021);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-top: 0.6em;
-    opacity: 0.5;
-  }
-  .sync-indicator.synced  { color: #00e676; }
-  .sync-indicator.syncing { color: #ffb300; }
-  .sync-indicator.error   { color: #ff1744; }
+/* ── Chromakey ── */
+body.viewer.chromakey .top-right { display: none !important; }
 
-  /* ── Timer panel ── */
-  .timer-panel {
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 12px;
-    padding: 20px 24px;
-    width: var(--clock-size);
-    flex-shrink: 0;
-  }
+/* ────────────────────────────────────────────────────
+   VIEWER PAGE — flat floating elements, no panel
+──────────────────────────────────────────────────── */
+.vw-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 1vh;
+  padding: 3vh 4vw;
+  overflow: hidden;
+}
 
-  .timer-label {
-    font-size: 11px;
-    letter-spacing: 3px;
-    color: #555;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
+/* Each viewer element: hidden by default, JS sets display:flex to show */
+.vw-el {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
 
-  .timer-display {
-    font-size: clamp(40px, calc(var(--clock-size) * 0.133), 64px);
-    font-weight: bold;
-    letter-spacing: 0.06em;
-    text-align: center;
-    margin-bottom: 16px;
-    transition: color 0.3s;
-  }
+/* Clock area */
+.vw-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  .timer-display.running { color: #ffd600; }
-  .timer-display.paused  { color: #ff1744; }
-  .timer-display.expired { color: #ff1744; animation: pulse 1s ease-in-out infinite; }
-  .timer-display.idle    { color: #888; }
+.clock-sizer {
+  width: var(--clock-size, min(46vh, 46vw));
+  height: var(--clock-size, min(46vh, 46vw));
+  position: relative;
+  flex-shrink: 0;
+}
 
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+canvas#clock {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
 
-  .timer-controls {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-  }
+.clock-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  width: 68%;
+}
 
-  button {
-    background: #1a1a1a;
-    color: #ccc;
-    border: 1px solid #333;
-    border-radius: 6px;
-    padding: 12px 20px;
-    font-family: inherit;
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-    min-width: 80px;
-    -webkit-tap-highlight-color: transparent;
-  }
+.time-display {
+  font-size: calc(var(--clock-size) * 0.108);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--text-color);
+  white-space: nowrap;
+}
 
-  button:hover  { background: #252525; border-color: #555; color: #fff; }
-  button:active { opacity: 0.7; }
+.date-display {
+  font-size: calc(var(--clock-size) * 0.027);
+  color: #555;
+  letter-spacing: 0.15em;
+  margin-top: 0.4em;
+  text-transform: uppercase;
+}
 
-  button.primary   { background: #003d20; border-color: #00e676; color: #00e676; }
-  button.primary:hover { background: #005a2e; }
+.sync-indicator {
+  font-size: calc(var(--clock-size) * 0.021);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 0.5em;
+  opacity: 0.55;
+}
+.sync-indicator.synced  { color: #00e676; }
+.sync-indicator.syncing { color: #ffb300; }
+.sync-indicator.error   { color: #ff1744; }
 
-  button.stop-btn  { background: #3d0000; border-color: #ff1744; color: #ff1744; }
-  button.stop-btn:hover { background: #5a0000; }
+/* Hide date and NTP status on viewer — operator-only info */
+body.viewer .date-display,
+body.viewer .sync-indicator { display: none; }
 
-  .config-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 4px;
-    flex-wrap: wrap;
-  }
+/* ── Digital clock style ── */
+body.clock-digital canvas#clock { display: none !important; }
+body.clock-digital .clock-sizer {
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+body.clock-digital .clock-center {
+  position: static;
+  transform: none;
+  width: auto;
+  text-align: center;
+}
+body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px); letter-spacing: 0.06em; }
 
-  .config-row label { font-size: 11px; letter-spacing: 2px; color: #555; text-transform: uppercase; }
 
-  .config-row input {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #fff;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 16px; /* 16px prevents iOS zoom on focus */
-    padding: 8px 10px;
-    width: 64px;
-    text-align: center;
-  }
+/* ── Viewer element values ── */
+.vw-el-value {
+  font-size: clamp(40px, min(16vw, 24vh), 320px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.05;
+  transition: color 0.3s;
+}
 
-  .config-row input:focus { outline: none; border-color: #555; }
-  .config-row span { color: #444; font-size: 12px; }
+.vw-message-text {
+  font-size: clamp(28px, min(13vw, 18vh), 240px);
+  font-weight: 700;
+  color: var(--message-color);
+  text-align: center;
+  line-height: 1.1;
+  word-break: break-word;
+  white-space: pre-wrap;
+  width: 100%;
+  max-width: 96vw;
+}
 
-  .conn-dot {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    margin-right: 6px;
-    background: #444;
-    transition: background 0.3s;
-  }
-  .conn-dot.connected   { background: #00e676; }
-  .conn-dot.error       { background: #ff1744; }
+/* Timer color states */
+.timer-idle    { color: #444; }
+.timer-running { color: var(--timer-color); }
+.timer-warn2   { color: #ff6d00; }
+.timer-warning { color: #ff1744; }
+.timer-paused  { color: #888; }
+.timer-expired { color: #ff1744; animation: pulse 0.9s ease-in-out infinite; }
 
-  /* ── Top-right buttons ── */
-  .top-right {
-    position: fixed;
-    top: 12px; right: 12px;
-    display: flex;
-    gap: 8px;
-    z-index: 10;
-  }
+/* Stopwatch colors */
+.sw-idle    { color: #444; }
+.sw-running { color: var(--stopwatch-color); }
+.sw-paused  { color: #888; }
 
-  /* ── Fullscreen button ── */
-  #fsBtn {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #555;
-    cursor: pointer;
-    padding: 8px;
-    line-height: 0;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #fsBtn:hover { color: #fff; border-color: #555; background: #252525; }
-  #fsBtn svg { width: 18px; height: 18px; }
+/* Target time colors */
+.target-pending { color: var(--target-color); }
+.target-elapsed { color: color-mix(in srgb, var(--target-color) 40%, #000); }
 
-  #operatorBtn {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #555;
-    cursor: pointer;
-    padding: 8px 12px;
-    font-family: inherit;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #operatorBtn:hover, #viewerBtn:hover { color: #fff; border-color: #555; background: #252525; }
+/* Message color */
+.vw-message-text { color: var(--message-color); }
 
-  #viewerBtn {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 6px;
-    color: #555;
-    cursor: pointer;
-    padding: 8px 12px;
-    font-family: inherit;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-    -webkit-tap-highlight-color: transparent;
-  }
+/* Flash animation */
+#vwMessage.flashing .vw-message-text {
+  animation: cue-flash 0.5s ease-in-out 6;
+}
 
-  /* ── Viewer mode — hide controls, keep display ── */
-  body.viewer .timer-controls,
-  body.viewer .config-row { display: none !important; }
+@keyframes pulse    { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
+@keyframes cue-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.07; } }
 
-  body.viewer .timer-panel {
-    cursor: default;
-    pointer-events: none;
-  }
+/* Connection dot */
+.conn-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #2a2a2a;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+.conn-dot.connected { background: #00e676; }
+.conn-dot.error     { background: #ff1744; }
 
-  /* ── Portrait on wider screens — allow bigger clock ── */
-  @media (orientation: portrait) and (min-width: 600px) {
-    :root { --clock-size: min(600px, 85vw); }
-  }
+/* ────────────────────────────────────────────────────
+   OPERATOR PAGE
+──────────────────────────────────────────────────── */
+.op-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
 
-  /* ── Landscape — clock fills screen, timer overlaid inside circle ── */
-  @media (orientation: landscape) {
-    :root { --clock-size: min(96vh, 96vw); }
+.op-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid #181818;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
 
-    body {
-      padding: 0;
-      gap: 0;
-      overflow: hidden;
-    }
+.op-time {
+  font-size: clamp(48px, 8vw, 96px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  line-height: 1;
+}
 
-    /* Time/date sits in the upper portion of the inner circle.
-       Together with the timer at 62%, the whole group is centred
-       within the inner circle (≈13.75% – 86.25% of clock-size). */
-    .clock-center { top: 38%; }
+.op-date {
+  font-size: 11px;
+  color: #3a3a3a;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  align-self: center;
+}
 
-    /* Timer panel — centred on the 62% mark */
-    .timer-panel {
-      position: absolute;
-      top: 62%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 58%;
-      background: transparent;
-      border: none;
-      padding: 0;
-      z-index: 5;
-      pointer-events: auto;
-    }
+.op-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  color: #777;
+  letter-spacing: 1px;
+}
+.op-status-item { display: flex; align-items: center; gap: 5px; }
 
-    .timer-label { display: none; }
+/* Cards grid */
+.op-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  align-content: start;
+}
+@media (max-width: 680px) { .op-grid { grid-template-columns: 1fr; } }
 
-    .timer-display {
-      font-size: clamp(32px, calc(var(--clock-size) * 0.085), 120px);
-    }
+.op-card {
+  background: #0e0e0e;
+  border: 1px solid #1c1c1c;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-    /* Viewer: no controls so the timer number can be much larger */
-    body.viewer .timer-panel {
-      width: 70%;
-    }
+.op-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid #181818;
+  flex-shrink: 0;
+}
 
-    body.viewer .timer-display {
-      font-size: clamp(48px, calc(var(--clock-size) * 0.2), 240px);
-      margin-bottom: 0;
-    }
+.op-card-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #777;
+  text-transform: uppercase;
+}
 
-    /* Viewer with no timer set — hide panel, recentre clock info */
-    body.viewer.timer-unset .timer-panel { display: none; }
-    body.viewer.timer-unset .clock-center { top: 50%; }
-  }
+/* Colour swatch in card header */
+.widget-color {
+  width: 22px;
+  height: 22px;
+  padding: 1px 2px;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #181818;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.widget-color:hover { border-color: #555; }
+
+.op-card-body {
+  padding: 12px 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Toggle switch */
+.sw-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sw-toggle input[type=checkbox] { display: none; }
+.sw-track {
+  display: inline-block;
+  width: 32px; height: 17px;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.sw-track::after {
+  content: '';
+  position: absolute;
+  width: 13px; height: 13px;
+  background: #3a3a3a;
+  border-radius: 50%;
+  top: 1px; left: 1px;
+  transition: left 0.18s, background 0.18s;
+}
+.sw-toggle input:checked + .sw-track { background: #003d20; border-color: #00693a; }
+.sw-toggle input:checked + .sw-track::after { left: 16px; background: #00e676; }
+.sw-label { font-size: 10px; color: #777; letter-spacing: 1px; text-transform: uppercase; }
+.sw-toggle input:checked ~ .sw-label { color: #00e676; }
+
+/* Operator current value display */
+.op-display {
+  font-size: clamp(26px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  transition: color 0.3s;
+  padding: 2px 0;
+}
+
+/* Inputs */
+.op-input {
+  background: #181818;
+  border: 1px solid #242424;
+  border-radius: 5px;
+  color: #ddd;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 14px;
+  padding: 7px 10px;
+  transition: border-color 0.15s;
+}
+.op-input:focus { outline: none; border-color: #444; color: #fff; }
+.op-input[type=number] { width: 58px; text-align: center; }
+.op-input[type=time]   { width: 110px; color-scheme: dark; }
+.op-input.full         { width: 100%; }
+
+.op-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.op-input-row label {
+  font-size: 9px;
+  color: #777;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  min-width: 44px;
+}
+.op-input-row span { font-size: 11px; color: #888; }
+
+/* Buttons */
+.btn {
+  background: #181818;
+  border: 1px solid #242424;
+  border-radius: 6px;
+  color: #666;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.btn:hover  { background: #202020; border-color: #404040; color: #fff; }
+.btn:active { opacity: 0.7; }
+.btn.primary { background: #003d20; border-color: #00693a; color: #00e676; }
+.btn.primary:hover { background: #004a28; }
+.btn.danger  { background: #3d0000; border-color: #691a1a; color: #ff1744; }
+.btn.danger:hover  { background: #4a0000; }
+.btn.amber   { background: #2a1a00; border-color: #664400; color: #ffa000; }
+.btn.amber:hover   { background: #352100; }
+
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Textarea */
+.op-textarea {
+  background: #181818;
+  border: 1px solid #242424;
+  border-radius: 5px;
+  color: #ddd;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  width: 100%;
+  resize: none;
+  height: 68px;
+  transition: border-color 0.15s;
+  line-height: 1.5;
+}
+.op-textarea:focus { outline: none; border-color: #444; color: #fff; }
+
+/* ── shared helpers ── */
+.color-group { display: flex; align-items: center; gap: 5px; }
+.color-text {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #bbb; font-family: 'Roboto Mono', monospace; font-size: 11px;
+  padding: 5px 7px; width: 88px; letter-spacing: 0.5px;
+}
+.color-text:focus { outline: none; border-color: #555; color: #fff; }
+.color-text.invalid { border-color: #ff1744; color: #ff1744; }
+
+.btn-sm {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #666; cursor: pointer; padding: 6px 10px; font-family: inherit;
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-sm:hover { background: #222; border-color: #444; color: #fff; }
+.btn-sm.primary { background: #003d20; border-color: #00693a; color: #00e676; }
+.btn-sm.primary:hover { background: #004a28; }
+
+.preset-name-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.preset-name-row input[type=text] {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #fff; font-family: 'Roboto Mono', monospace; font-size: 12px;
+  padding: 8px 10px; flex: 1; min-width: 0;
+}
+.preset-name-row input:focus { outline: none; border-color: #444; }
+.copy-url-btn { width: 100%; margin-top: 2px; text-align: center; }
+.presets-list {
+  list-style: none; display: flex; flex-direction: column;
+  gap: 5px; margin-top: 10px; max-height: 180px; overflow-y: auto;
+}
+.preset-item {
+  display: flex; align-items: center; gap: 6px;
+  background: #141414; border: 1px solid #1c1c1c; border-radius: 4px; padding: 7px 8px;
+}
+.preset-item-name { flex: 1; font-size: 11px; color: #aaa; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset-item-name:hover { color: #fff; }
+.preset-item-link { color: #555; font-size: 12px; text-decoration: none; flex-shrink: 0; }
+.preset-item-link:hover { color: #00e676; }
+.preset-item-delete { color: #555; cursor: pointer; font-size: 16px; line-height: 1; background: none; border: none; padding: 0 2px; flex-shrink: 0; transition: color 0.15s; }
+.preset-item-delete:hover { color: #ff1744; }
+.no-presets { font-size: 10px; color: #666; padding: 4px 0; }
+
+/* ────────────────────────────────────────────────────
+   OPERATOR SECTIONS (display settings + layout editor)
+──────────────────────────────────────────────────── */
+.op-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.op-section {
+  border-top: 1px solid #181818;
+}
+
+.op-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.op-section-header:hover { background: #0c0c0c; }
+
+.op-section-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #777;
+  text-transform: uppercase;
+}
+
+.section-chevron {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s;
+}
+.section-open .section-chevron { transform: rotate(180deg); }
+
+.op-section-body {
+  padding: 14px 14px 18px;
+}
+
+/* Display settings */
+.ds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.ds-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ds-group-title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #181818;
+  padding-bottom: 6px;
+}
+
+.ds-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ds-label {
+  font-size: 11px;
+  color: #999;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.ds-row select {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #bbb; font-family: 'Roboto Mono', monospace; font-size: 11px;
+  padding: 5px 7px; color-scheme: dark; cursor: pointer;
+}
+.ds-row select:focus { outline: none; border-color: #444; }
+
+.ds-row input[type=color] {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  width: 32px; height: 26px; padding: 2px 3px; cursor: pointer; flex-shrink: 0;
+}
+
+.ds-footer {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #181818;
+  margin-top: 4px;
+}
+
+
+/* ────────────────────────────────────────────────────
+   CUSTOM LAYOUT — viewer absolute positioning
+   All other visibility/focus rules are overridden
+──────────────────────────────────────────────────── */
+body.custom-layout .vw-page {
+  position: relative;
+  gap: 0;
+  padding: 0;
+}
+body.custom-layout .vw-el {
+  position: absolute;
+  width: auto;
+  transform-origin: center;
+}
+body.custom-layout .vw-el-value { white-space: nowrap; }
+body.custom-layout #vwMessage {
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+}
+body.custom-layout .vw-message-text {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  text-align: center;
+  width: 100%;
+  max-width: unset;
+  box-sizing: border-box;
+}
+
+/* ────────────────────────────────────────────────────
+   LAYOUT EDITOR (inline)
+──────────────────────────────────────────────────── */
+
+/* 16:9 stage, fills width */
+.le-stage-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  background: #080808;
+  border: 1px solid #1e1e1e;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+#leStage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.le-el {
+  position: absolute;
+  border: 1px dashed;
+  border-radius: 3px;
+  cursor: grab;
+  user-select: none;
+  transform-origin: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  touch-action: none;
+  transition: box-shadow 0.15s;
+  line-height: 1.1;
+}
+.le-el:hover    { box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
+.le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
+
+/* Message resize handles — one per edge */
+.le-msg-resize {
+  position: absolute;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+}
+.le-msg-resize::after {
+  content: '';
+  background: rgba(255,152,0,0.7);
+  border-radius: 2px;
+}
+.le-msg-resize-l { left: -5px;   top: 0; bottom: 0; width: 10px; cursor: ew-resize; }
+.le-msg-resize-r { right: -5px;  top: 0; bottom: 0; width: 10px; cursor: ew-resize; }
+.le-msg-resize-t { top: -5px;    left: 0; right: 0; height: 10px; cursor: ns-resize; }
+.le-msg-resize-b { bottom: -5px; left: 0; right: 0; height: 10px; cursor: ns-resize; }
+.le-msg-resize-l::after, .le-msg-resize-r::after { width: 3px; height: 24px; }
+.le-msg-resize-t::after, .le-msg-resize-b::after { height: 3px; width: 24px; }
+
+/* Scale sliders below stage */
+.le-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.le-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0e0e0e;
+  border: 1px solid #1c1c1c;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.le-slider-name {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+  width: 68px;
+  flex-shrink: 0;
+}
+
+.le-scale-range {
+  flex: 1;
+  accent-color: #555;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.le-scale-val {
+  font-size: 10px;
+  color: #888;
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.le-pos-val {
+  font-size: 10px;
+  color: #777;
+  width: 52px;
+  text-align: right;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
 
-<div class="top-right">
-  <a id="operatorBtn" href="operator" title="Operator view">Operator</a>
-  <a id="viewerBtn" href="." title="Viewer view">Viewer</a>
-  <button id="fsBtn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+<!-- ── Top-right nav: viewer ── -->
+<div class="top-right viewer-only">
+  <a class="nav-btn" id="operatorLink" href="operator">Operator</a>
+  <button class="icon-btn" onclick="toggleFullscreen()" title="Fullscreen">
     <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
       <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
@@ -336,297 +774,1354 @@
   </button>
 </div>
 
-<div class="clock-wrapper">
-  <div class="clock-face">
-    <canvas id="clock" width="480" height="480"></canvas>
-    <div class="clock-center">
-      <div class="time-display" id="timeDisplay">00:00:00</div>
-      <div class="date-display" id="dateDisplay"></div>
-      <div class="sync-indicator syncing" id="syncIndicator">syncing...</div>
-    </div>
-  </div>
-
-  <div class="timer-panel">
-    <div class="timer-label">
-      <span class="conn-dot" id="connDot"></span>Timer
-    </div>
-    <div class="timer-display idle" id="timerDisplay">00:00</div>
-    <div class="timer-controls">
-      <button class="primary" id="startBtn"  onclick="timerCmd('start')">Start</button>
-      <button               id="pauseBtn"  onclick="timerCmd('pause')"  style="display:none">Pause</button>
-      <button               id="resumeBtn" onclick="timerCmd('resume')" style="display:none">Resume</button>
-      <button class="stop-btn" id="resetBtn" onclick="timerCmd('reset')"  style="display:none">Reset</button>
-    </div>
-    <div class="config-row">
-      <label>Duration</label>
-      <input type="number" id="durationMins" value="0" min="0" max="99">
-      <span>min</span>
-      <input type="number" id="durationSecs" value="0" min="0" max="59">
-      <span>sec</span>
-      <button id="saveBtn" onclick="saveDuration()">Save</button>
-    </div>
+<!-- ── Top-right nav: operator ── -->
+<div class="top-right operator-only">
+  <a class="nav-btn" id="viewerLink" href=".">Viewer</a>
+  <div class="op-status-item" style="background:rgba(20,20,20,0.92);border:1px solid #2a2a2a;border-radius:6px;padding:7px 12px;font-size:10px;letter-spacing:1px;color:#333;display:flex;align-items:center;gap:6px;">
+    <span class="conn-dot" id="connDot"></span>
+    <span id="syncStatus">syncing…</span>
   </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════════════
+     OPERATOR PAGE
+═════════════════════════════════════════════════════ -->
+<div class="op-page operator-only">
+
+  <div class="op-header">
+    <div class="op-time" id="opTime">00:00:00</div>
+    <div class="op-date" id="opDate"></div>
+  </div>
+
+  <div class="op-body">
+  <div class="op-grid">
+
+    <!-- Countdown Timer -->
+    <div class="op-card">
+      <div class="op-card-header">
+        <span class="op-card-title">Countdown Timer</span>
+        <input type="color" class="widget-color" id="timerColorPick" value="#ffd600" title="Timer colour" oninput="onWidgetColorChange('timer',this.value)">
+        <label class="sw-toggle">
+          <input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)">
+          <span class="sw-track"></span>
+          <span class="sw-label">On Display</span>
+        </label>
+      </div>
+      <div class="op-card-body">
+        <div class="op-display timer-idle" id="opTimerDisplay">00:00</div>
+        <div class="op-input-row">
+          <label>Label</label>
+          <input type="text" class="op-input full" id="timerLabel" placeholder="Label…" maxlength="60"
+            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
+        </div>
+        <div class="op-input-row">
+          <label>Duration</label>
+          <input type="number" class="op-input" id="timerMins" value="5" min="0" max="99">
+          <span>min</span>
+          <input type="number" class="op-input" id="timerSecs" value="0" min="0" max="59">
+          <span>sec</span>
+        </div>
+        <div class="op-input-row">
+          <label class="sw-toggle" style="min-width:unset;gap:5px;">
+            <input type="checkbox" id="timerWarn2AtEnabled" checked onchange="updateTimerConfig()">
+            <span class="sw-track"></span>
+          </label>
+          <input type="number" class="op-input" id="timerWarn2At" value="5" min="0" max="99"
+            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
+          <span>min</span>
+          <span style="color:#ff6d00;font-size:16px;line-height:1;">●</span>
+        </div>
+        <div class="op-input-row">
+          <label class="sw-toggle" style="min-width:unset;gap:5px;">
+            <input type="checkbox" id="timerWarnAtEnabled" checked onchange="updateTimerConfig()">
+            <span class="sw-track"></span>
+          </label>
+          <input type="number" class="op-input" id="timerWarnAt" value="1" min="0" max="99"
+            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
+          <span>min</span>
+          <span style="color:#ff1744;font-size:16px;line-height:1;">●</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="timerStartBtn"  onclick="timerStart()">Start</button>
+          <button class="btn amber"   id="timerPauseBtn"  onclick="timerPause()"  style="display:none">Pause</button>
+          <button class="btn primary" id="timerResumeBtn" onclick="timerResume()" style="display:none">Resume</button>
+          <button class="btn danger"  id="timerResetBtn"  onclick="timerReset()"  style="display:none">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Target Time -->
+    <div class="op-card">
+      <div class="op-card-header">
+        <span class="op-card-title">Target Time</span>
+        <input type="color" class="widget-color" id="targetColorPick" value="#ffffff" title="Target colour" oninput="onWidgetColorChange('target',this.value)">
+        <label class="sw-toggle">
+          <input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)">
+          <span class="sw-track"></span>
+          <span class="sw-label">On Display</span>
+        </label>
+      </div>
+      <div class="op-card-body">
+        <div class="op-display target-pending" id="opTargetDisplay">--:--</div>
+        <div class="op-input-row">
+          <label>Label</label>
+          <input type="text" class="op-input full" id="targetLabel" placeholder="Label…" maxlength="60"
+            onblur="updateTargetTime()" onkeydown="if(event.key==='Enter')updateTargetTime()">
+        </div>
+        <div class="op-input-row">
+          <label>Target</label>
+          <input type="time" class="op-input" id="targetInput" onchange="updateTargetTime()">
+        </div>
+        <div class="op-input-row" style="margin-top:2px;">
+          <label class="sw-toggle" style="min-width:unset;">
+            <input type="checkbox" id="targetEnabled" onchange="updateTargetTime()">
+            <span class="sw-track"></span>
+            <span class="sw-label">Active</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stopwatch -->
+    <div class="op-card">
+      <div class="op-card-header">
+        <span class="op-card-title">Stopwatch</span>
+        <input type="color" class="widget-color" id="stopwatchColorPick" value="#4fc3f7" title="Stopwatch colour" oninput="onWidgetColorChange('stopwatch',this.value)">
+        <label class="sw-toggle">
+          <input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)">
+          <span class="sw-track"></span>
+          <span class="sw-label">On Display</span>
+        </label>
+      </div>
+      <div class="op-card-body">
+        <div class="op-display sw-idle" id="opSwDisplay">00:00</div>
+        <div class="op-input-row">
+          <label>Label</label>
+          <input type="text" class="op-input full" id="swLabel" placeholder="Label…" maxlength="60"
+            onblur="updateSwConfig()" onkeydown="if(event.key==='Enter')updateSwConfig()">
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="swStartBtn"  onclick="swStart()">Start</button>
+          <button class="btn amber"   id="swPauseBtn"  onclick="swPause()"  style="display:none">Pause</button>
+          <button class="btn primary" id="swResumeBtn" onclick="swResume()" style="display:none">Resume</button>
+          <button class="btn danger"  id="swResetBtn"  onclick="swReset()"  style="display:none">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message / Cue -->
+    <div class="op-card">
+      <div class="op-card-header">
+        <span class="op-card-title">Message / Cue</span>
+        <input type="color" class="widget-color" id="messageColorPick" value="#ffffff" title="Message colour" oninput="onWidgetColorChange('message',this.value)">
+        <label class="sw-toggle">
+          <input type="checkbox" id="showMessage" onchange="setShow('message', this.checked)">
+          <span class="sw-track"></span>
+          <span class="sw-label">On Display</span>
+        </label>
+      </div>
+      <div class="op-card-body">
+        <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
+        <div class="btn-row">
+          <button class="btn primary" onclick="msgShow()">Show</button>
+          <button class="btn amber"   onclick="msgFlash()">Flash</button>
+          <button class="btn danger"  onclick="msgClear()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end op-grid -->
+
+  <!-- ── Layout Editor ── -->
+  <div class="op-section" id="layoutEditorSection">
+    <div class="op-section-header" onclick="toggleLayoutEditor()">
+      <span class="op-section-title">Layout Editor</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-sm" onclick="event.stopPropagation();resetLayout()">Reset</button>
+        <span class="section-chevron" id="layoutEditorChevron">▾</span>
+      </div>
+    </div>
+    <div class="op-section-body" id="layoutEditorBody" style="display:block">
+      <div class="le-stage-wrap">
+        <div id="leStage"></div>
+      </div>
+      <div class="le-sliders">
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#00e676">Clock</span>
+          <input type="range" class="le-scale-range" id="le-scale-clock" min="0.2" max="2.5" step="0.05" value="1" oninput="onScaleChange('clock',this.value)">
+          <span class="le-scale-val" id="le-scaleval-clock">100%</span>
+          <span class="le-pos-val" id="le-pos-clock">50/44</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ffd600">Timer</span>
+          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
+          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
+          <span class="le-pos-val" id="le-pos-timer">20/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#4fc3f7">Stopwatch</span>
+          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
+          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
+          <span class="le-pos-val" id="le-pos-stopwatch">50/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ce93d8">Target</span>
+          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
+          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
+          <span class="le-pos-val" id="le-pos-targetTime">80/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ff9800">Message</span>
+          <input type="range" class="le-scale-range" id="le-scale-message" min="0.1" max="1.0" step="0.05" value="1.0" oninput="onScaleChange('message',this.value)">
+          <span class="le-scale-val" id="le-scaleval-message">100%</span>
+          <button class="btn-sm" onclick="fitMessageScale()" style="margin-left:4px;padding:2px 6px;font-size:11px">Fit</button>
+          <span class="le-pos-val" id="le-pos-message">50/50</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Display Settings ── -->
+  <div class="op-section" id="displaySettingsSection">
+    <div class="op-section-header" onclick="toggleDisplaySettings()">
+      <span class="op-section-title">Display Settings</span>
+      <span class="section-chevron" id="displaySettingsChevron" style="transform:rotate(180deg)">▾</span>
+    </div>
+    <div class="op-section-body" id="displaySettingsBody" style="display:block">
+      <div class="ds-grid">
+        <div class="ds-group">
+          <div class="ds-group-title">Appearance</div>
+          <div class="ds-row">
+            <span class="ds-label">Clock style</span>
+            <select id="settingClockStyle" onchange="onSettingChange()">
+              <option value="analog">Analog</option>
+              <option value="digital">Digital</option>
+            </select>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Seconds ring</span>
+            <label class="sw-toggle">
+              <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
+              <span class="sw-track"></span>
+            </label>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Chromakey</span>
+            <label class="sw-toggle">
+              <input type="checkbox" id="settingChromakey" onchange="onSettingChange()">
+              <span class="sw-track"></span>
+            </label>
+          </div>
+        </div>
+        <div class="ds-group">
+          <div class="ds-group-title">Colours</div>
+          <div class="ds-row">
+            <span class="ds-label">Background</span>
+            <div class="color-group">
+              <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
+              <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
+            </div>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Clock ring</span>
+            <div class="color-group">
+              <input type="color" id="settingClockColor" value="#00e676" oninput="onColorPickerChange('Clock')">
+              <input type="text" id="settingClockColorText" class="color-text" value="#00e676" onblur="onColorTextChange('Clock')" onkeydown="if(event.key==='Enter')onColorTextChange('Clock')">
+            </div>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Text</span>
+            <div class="color-group">
+              <input type="color" id="settingTextColor" value="#ffffff" oninput="onColorPickerChange('Text')">
+              <input type="text" id="settingTextColorText" class="color-text" value="#ffffff" onblur="onColorTextChange('Text')" onkeydown="if(event.key==='Enter')onColorTextChange('Text')">
+            </div>
+          </div>
+        </div>
+        <div class="ds-group">
+          <div class="ds-group-title">Presets</div>
+          <div class="preset-name-row">
+            <input type="text" id="presetNameInput" placeholder="Preset name…" maxlength="80">
+            <button class="btn-sm primary" onclick="savePreset()">Save</button>
+          </div>
+          <button class="btn-sm copy-url-btn" onclick="copySettingsUrl()">Copy Viewer URL</button>
+          <ul class="presets-list" id="presetsList"></ul>
+        </div>
+      </div>
+      <div class="ds-footer">
+        <button class="btn danger" onclick="resetSettingsToDefaults()">Reset to Defaults</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- end op-body -->
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     VIEWER PAGE
+═════════════════════════════════════════════════════ -->
+<div class="vw-page viewer-only">
+
+  <div class="vw-el vw-clock" id="vwClock">
+    <div class="clock-sizer">
+      <canvas id="clock"></canvas>
+      <div class="clock-center">
+        <div class="time-display" id="timeDisplay">00:00:00</div>
+        <div class="date-display" id="dateDisplay"></div>
+        <div class="sync-indicator syncing" id="syncIndicator">syncing…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vw-el" id="vwTimer">
+    <div class="vw-el-value timer-idle" id="vwTimerValue">00:00</div>
+  </div>
+
+  <div class="vw-el" id="vwStopwatch">
+    <div class="vw-el-value sw-idle" id="vwSwValue">00:00</div>
+  </div>
+
+  <div class="vw-el" id="vwTarget">
+    <div class="vw-el-value target-pending" id="vwTargetValue">--:--</div>
+  </div>
+
+  <div class="vw-el" id="vwMessage">
+    <div class="vw-message-text" id="vwMsgText"></div>
+  </div>
+
+</div>
+
 <script>
-  // ── Base path detection (works standalone and behind a reverse proxy) ──
-  // Strip the last path segment to get the base, then ensure trailing slash.
-  // e.g. /studio-clock/  => /studio-clock/
-  //      /studio-clock/operator => /studio-clock/
-  //      /  => /
-  //      /operator => /
-  const lastSegment = location.pathname.split('/').filter(Boolean).pop() || '';
-  const knownRoutes = ['operator'];
-  const BASE = knownRoutes.includes(lastSegment)
-    ? location.pathname.slice(0, location.pathname.lastIndexOf(lastSegment))
-    : (location.pathname.endsWith('/') ? location.pathname : location.pathname + '/');
+// ── Path / mode detection ──────────────────────────────────────────────────
+const lastSegment = location.pathname.split('/').filter(Boolean).pop() || '';
+const BASE = ['operator'].includes(lastSegment)
+  ? location.pathname.slice(0, location.pathname.lastIndexOf(lastSegment))
+  : (location.pathname.endsWith('/') ? location.pathname : location.pathname + '/');
 
-  // ── Time Sync ──────────────────────────────────────────────────────────
-  let timeOffset = 0;
-  let synced = false;
+const isOperator = lastSegment === 'operator';
+document.body.classList.add(isOperator ? 'operator' : 'viewer');
 
-  function serverNow() { return new Date(Date.now() + timeOffset); }
+// ── Settings (viewer display preferences) ─────────────────────────────────
+const DEFAULT_ELEMENT_POSITIONS = {
+  clock:      { x: 50, y: 21,  scale: 1.5  },
+  timer:      { x: 16, y: 50,  scale: 0.7  },
+  stopwatch:  { x: 50, y: 50,  scale: 0.7  },
+  targetTime: { x: 84, y: 50,  scale: 0.7  },
+  message:    { x: 50, y: 80,  scale: 1.0,  width: 100, height: 40 },
+};
 
-  async function syncTime() {
-    const indicator = document.getElementById('syncIndicator');
-    try {
-      const t0 = Date.now();
-      const data = await fetch(BASE + 'time', { cache: 'no-store' }).then(r => r.json());
-      const latency = (Date.now() - t0) / 2;
-      timeOffset = data.ts + latency - Date.now();
-      synced = true;
-      const src = data.ntpSynced ? 'ntp' : 'system clock';
-      indicator.textContent = `${src} · ±${Math.round(latency)}ms`;
-      indicator.className = 'sync-indicator synced';
-    } catch {
-      indicator.textContent = synced ? 'sync lost · local time' : 'no sync · local time';
-      indicator.className = 'sync-indicator error';
-    }
+const DEFAULT_SETTINGS = {
+  showSeconds:      true,
+  clockColor:       '#00e676',
+  bgColor:          '#0a0a0a',
+  textColor:        '#ffffff',
+  chromakey:        false,
+  viewerLayout:     'auto',
+  clockStyle:       'digital',
+  customLayout:     true,
+  timerColor:       '#ffd600',
+  stopwatchColor:   '#4fc3f7',
+  targetColor:      '#ffffff',
+  messageColor:     '#ffffff',
+  elementPositions: JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS)),
+};
+
+let settings = { ...DEFAULT_SETTINGS };
+
+function encodeSettings(s) { return btoa(JSON.stringify(s)); }
+function decodeSettings(str) {
+  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(atob(str)) }; }
+  catch { return null; }
+}
+
+// CSS color → hex helper
+const _cc = document.createElement('canvas');
+_cc.width = _cc.height = 1;
+const _cx = _cc.getContext('2d');
+function cssColorToHex(str) {
+  str = str.trim();
+  if (!str) return null;
+  _cx.fillStyle = '#ff00ff';
+  _cx.fillStyle = str;
+  const p = _cx.fillStyle;
+  const fuchsia = ['#ff00ff','fuchsia','magenta'];
+  if (p === '#ff00ff' && !fuchsia.includes(str.toLowerCase())) return null;
+  if (p.startsWith('#')) return p;
+  const m = p.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  return m ? '#' + [m[1],m[2],m[3]].map(n => parseInt(n).toString(16).padStart(2,'0')).join('') : null;
+}
+
+function setColorPair(key, hex) {
+  const picker = document.getElementById('setting' + key + 'Color');
+  const text   = document.getElementById('setting' + key + 'ColorText');
+  if (picker) picker.value = hex;
+  if (text)   { text.value = hex; text.classList.remove('invalid'); }
+}
+
+function onColorPickerChange(key) {
+  const hex = document.getElementById('setting' + key + 'Color').value;
+  const text = document.getElementById('setting' + key + 'ColorText');
+  if (text) { text.value = hex; text.classList.remove('invalid'); }
+  onSettingChange();
+}
+
+function onColorTextChange(key) {
+  const input = document.getElementById('setting' + key + 'ColorText');
+  const hex = cssColorToHex(input.value);
+  if (hex) { setColorPair(key, hex); onSettingChange(); }
+  else input.classList.add('invalid');
+}
+
+function applySettings(s) {
+  settings = {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    elementPositions: { ...DEFAULT_SETTINGS.elementPositions, ...(s.elementPositions || {}) },
+  };
+  document.documentElement.style.setProperty('--bg-color',        settings.bgColor);
+  document.documentElement.style.setProperty('--clock-color',     settings.clockColor);
+  document.documentElement.style.setProperty('--text-color',      settings.textColor);
+  document.documentElement.style.setProperty('--timer-color',     settings.timerColor     || '#ffd600');
+  document.documentElement.style.setProperty('--stopwatch-color', settings.stopwatchColor || '#4fc3f7');
+  document.documentElement.style.setProperty('--target-color',    settings.targetColor    || '#ffffff');
+  document.documentElement.style.setProperty('--message-color',   settings.messageColor   || '#ffffff');
+
+  // Visual body classes only affect the viewer page
+  if (!isOperator) {
+    document.body.classList.toggle('chromakey', settings.chromakey);
+    document.body.classList.toggle('clock-digital', settings.clockStyle === 'digital');
+    for (const l of ['sidebar','column','row']) document.body.classList.remove('layout-' + l);
+    if (settings.viewerLayout !== 'auto') document.body.classList.add('layout-' + settings.viewerLayout);
+    applyCustomLayout();
   }
 
-  // Viewer vs operator mode — works at /operator and /studio-clock/operator
-  const isOperator = location.pathname.split('/').filter(Boolean).pop() === 'operator';
-  if (!isOperator) document.body.classList.add('viewer');
+  // Sync settings panel controls (operator page)
+  const el = id => document.getElementById(id);
+  const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
+  const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
+  const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
+  setColorPair('Bg',    settings.bgColor);
+  setColorPair('Clock', settings.clockColor);
+  setColorPair('Text',  settings.textColor);
+  const tcp = el('timerColorPick');     if (tcp) tcp.value = settings.timerColor     || '#ffd600';
+  const scp = el('stopwatchColorPick'); if (scp) scp.value = settings.stopwatchColor || '#4fc3f7';
+  const gcp = el('targetColorPick');    if (gcp) gcp.value = settings.targetColor    || '#ffffff';
+  const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
 
-  syncTime();
-  setInterval(syncTime, 30000);
+  updateNavLinks();
+}
 
-  // ── Clock ──────────────────────────────────────────────────────────────
-  const canvas = document.getElementById('clock');
-  const ctx = canvas.getContext('2d');
-  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function readSettingsFromPanel() {
+  const g = id => document.getElementById(id);
+  return {
+    showSeconds:      g('settingShowSeconds')?.checked ?? settings.showSeconds,
+    bgColor:          g('settingBgColor')?.value       ?? settings.bgColor,
+    clockColor:       g('settingClockColor')?.value    ?? settings.clockColor,
+    textColor:        g('settingTextColor')?.value     ?? settings.textColor,
+    chromakey:        g('settingChromakey')?.checked   ?? settings.chromakey,
+    viewerLayout:     settings.viewerLayout,
+    clockStyle:       g('settingClockStyle')?.value    ?? settings.clockStyle,
+    customLayout:     true,
+    elementPositions: settings.elementPositions,
+  };
+}
 
-  // Resize canvas buffer to match rendered CSS size × device pixel ratio.
-  // Called each frame so it self-corrects on resize and fullscreen transitions.
-  function resizeCanvas() {
-    const dpr  = window.devicePixelRatio || 1;
-    const size = Math.round((canvas.getBoundingClientRect().width || 480) * dpr);
-    if (canvas.width !== size || canvas.height !== size) {
-      canvas.width  = size;
-      canvas.height = size;
+function onWidgetColorChange(key, value) {
+  const fieldMap = { timer: 'timerColor', stopwatch: 'stopwatchColor', target: 'targetColor', message: 'messageColor' };
+  const cssMap   = { timer: '--timer-color', stopwatch: '--stopwatch-color', target: '--target-color', message: '--message-color' };
+  const field = fieldMap[key];
+  if (!field) return;
+  settings[field] = value;
+  document.documentElement.style.setProperty(cssMap[key], value);
+  pushSettingsToServer();
+}
+
+let _settingsPushTimer = null;
+function pushSettingsToServer() {
+  clearTimeout(_settingsPushTimer);
+  _settingsPushTimer = setTimeout(() => {
+    fetch(BASE + 'settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    }).catch(() => {});
+  }, 120);
+}
+
+function onSettingChange() {
+  applySettings(readSettingsFromPanel());
+  pushSettingsToServer();
+}
+
+function resetSettingsToDefaults() {
+  fetch(BASE + 'settings/reset', { method: 'POST' }).catch(() => {});
+  applySettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+}
+
+// Initialise: viewer uses URL param if present, otherwise server state via SSE
+const urlS = new URLSearchParams(location.search).get('s');
+const settingsPinned = !isOperator && !!urlS;
+applySettings(urlS ? (decodeSettings(urlS) || DEFAULT_SETTINGS) : DEFAULT_SETTINGS);
+
+function updateNavLinks() {
+  const s = encodeSettings(settings);
+  const opLink = document.getElementById('operatorLink');
+  const vwLink = document.getElementById('viewerLink');
+  if (opLink) opLink.href = BASE + 'operator?s=' + s;
+  if (vwLink) vwLink.href = BASE + '?s=' + s;
+}
+
+// ── Custom layout (viewer) ─────────────────────────────────────────────────
+function applyCustomLayout() {
+  document.body.classList.add('custom-layout');
+  const pos = settings.elementPositions;
+  const map = { clock: 'vwClock', timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
+  for (const [key, id] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (!el || !pos[key]) continue;
+    el.style.left = pos[key].x + '%';
+    el.style.top  = pos[key].y + '%';
+    if (key === 'message') {
+      el.style.transform = 'translate(-50%, -50%)';
+      const mw = pos[key].width  ?? 60;
+      const mh = pos[key].height ?? 20;
+      el.style.width  = mw + '%';
+      el.style.height = mh + '%';
+      el.style.setProperty('--msg-box-w',  mw + 'vw');
+      el.style.setProperty('--msg-box-h',  mh + 'vh');
+      fitMessageToBox(pos[key].scale ?? 1.0);
+    } else {
+      el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
+      el.style.width  = '';
+      el.style.height = '';
     }
   }
+}
 
-  function drawClock() {
-    resizeCanvas();
-    const S  = canvas.width;           // physical pixels
-    const sc = S / 480;                // scale factor relative to original 480px design
-    const cx = S / 2, cy = S / 2;
-    const r  = 230 * sc;
+function fitMessageToBox(scale) {
+  requestAnimationFrame(() => {
+    const box = document.getElementById('vwMessage');
+    const txt = box?.querySelector('.vw-message-text');
+    if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
+    const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
+    const maxW = box.clientWidth;
+    const maxH = box.clientHeight;
 
-    const now = serverNow();
-    const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+    // Measure in an off-screen probe to avoid flex/overflow interference
+    const probe = document.createElement('div');
+    probe.style.cssText = `position:fixed;top:-9999px;left:0;visibility:hidden;` +
+      `width:${maxW}px;white-space:pre-wrap;overflow-wrap:break-word;word-wrap:break-word;` +
+      `font-family:'Roboto Mono',monospace;font-weight:700;line-height:1.1;` +
+      `padding:0;margin:0;box-sizing:border-box;`;
+    probe.textContent = txt.textContent || ' ';
+    document.body.appendChild(probe);
 
-    ctx.clearRect(0, 0, S, S);
+    let lo = 8, hi = 400, best = lo;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      probe.style.fontSize = mid + 'px';
+      if (probe.offsetHeight <= maxH) { best = mid; lo = mid + 1; }
+      else                            { hi = mid - 1; }
+    }
+    document.body.removeChild(probe);
+    txt.style.fontSize = Math.max(8, Math.floor(best * s)) + 'px';
+  });
+}
 
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = '#1a1a1a';
-    ctx.lineWidth = 2 * sc;
-    ctx.stroke();
+function fitMessageScale() {
+  setElemPos('message', { scale: 1.0 });
+  const slider = document.getElementById('le-scale-message');
+  if (slider) slider.value = 1.0;
+  const val = document.getElementById('le-scaleval-message');
+  if (val) val.textContent = '100%';
+  applyCustomLayout();
+  pushSettingsToServer();
+}
 
+// ── Layout editor ──────────────────────────────────────────────────────────
+const LE_ELEMENTS = {
+  clock:      { label: 'Clock',       color: '#00e676' },
+  timer:      { label: 'Timer',       color: '#ffd600' },
+  stopwatch:  { label: 'Stopwatch',   color: '#4fc3f7' },
+  targetTime: { label: 'Target Time', color: '#ce93d8' },
+  message:    { label: 'Message',     color: '#ff9800' },
+};
+
+let _leDrag = null;
+let _leStageBuilt = false;
+let _leRefreshInterval = null;
+
+function toggleLayoutEditor() {
+  const body = document.getElementById('layoutEditorBody');
+  const section = document.getElementById('layoutEditorSection');
+  const chev = document.getElementById('layoutEditorChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  if (!open) {
+    if (!_leStageBuilt) { buildLeStage(); _leStageBuilt = true; }
+    updateLeStage();
+    updateLayoutEditorControls();
+    if (!_leRefreshInterval) _leRefreshInterval = setInterval(updateLeStage, 500);
+  } else {
+    if (_leRefreshInterval) { clearInterval(_leRefreshInterval); _leRefreshInterval = null; }
+  }
+}
+
+
+function buildLeStage() {
+  const stage = document.getElementById('leStage');
+  if (!stage) return;
+  for (const [key, info] of Object.entries(LE_ELEMENTS)) {
+    const el = document.createElement('div');
+    el.className = 'le-el';
+    el.id = 'le-el-' + key;
+    el.dataset.key = key;
+    el.style.borderColor = info.color + '80';
+    el.style.background  = info.color + '0d';
+    stage.appendChild(el);
+    el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
+    el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
+    if (key === 'message') {
+      for (const [cls, dir] of [['le-msg-resize-l','left'],['le-msg-resize-r','right'],['le-msg-resize-t','top'],['le-msg-resize-b','bottom']]) {
+        const h = document.createElement('div');
+        h.className = 'le-msg-resize ' + cls;
+        h.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e, dir); }, { passive: false });
+        h.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e, dir); }, { passive: false });
+        el.appendChild(h);
+      }
+    }
+  }
+  stage.addEventListener('mousemove',  leDragMove);
+  stage.addEventListener('mouseup',    leDragEnd);
+  stage.addEventListener('mouseleave', leDragEnd);
+  stage.addEventListener('touchmove',  leDragMove, { passive: false });
+  stage.addEventListener('touchend',   leDragEnd);
+
+  window.addEventListener('resize', () => { if (_leStageBuilt) updateLeStage(); });
+}
+
+function sizeLeStage() {
+  // Stage sized via CSS aspect-ratio: 16/9 — no JS sizing needed
+}
+
+function getElemPos(key) {
+  const pos = settings.elementPositions || DEFAULT_ELEMENT_POSITIONS;
+  return { ...(DEFAULT_ELEMENT_POSITIONS[key] || { x: 50, y: 50, scale: 1 }), ...(pos[key] || {}) };
+}
+
+function setElemPos(key, updates) {
+  if (!settings.elementPositions) settings.elementPositions = JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS));
+  settings.elementPositions[key] = { ...getElemPos(key), ...updates };
+}
+
+function leStartDrag(e, key) {
+  e.preventDefault();
+  const stage = document.getElementById('leStage');
+  const sr = stage.getBoundingClientRect();
+  const cp = e.touches ? e.touches[0] : e;
+  const p = getElemPos(key);
+  _leDrag = { mode: 'move', key, startX: cp.clientX, startY: cp.clientY, startPosX: p.x, startPosY: p.y, stageW: sr.width, stageH: sr.height };
+  const el = document.getElementById('le-el-' + key);
+  if (el) el.classList.add('dragging');
+}
+
+function leStartResize(e, dir) {
+  e.preventDefault();
+  const stage = document.getElementById('leStage');
+  const sr = stage.getBoundingClientRect();
+  const cp = e.touches ? e.touches[0] : e;
+  const p = getElemPos('message');
+  _leDrag = { mode: 'resize', dir, key: 'message', startX: cp.clientX, startY: cp.clientY, startWidth: p.width ?? 60, startHeight: p.height ?? 20, stageW: sr.width, stageH: sr.height };
+  document.getElementById('le-el-message')?.classList.add('dragging');
+}
+
+function leDragMove(e) {
+  if (!_leDrag) return;
+  e.preventDefault();
+  const cp = e.touches ? e.touches[0] : e;
+  if (_leDrag.mode === 'resize') {
+    const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+    const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
+    const clampW = v => Math.max(10, Math.min(100, v));
+    const clampH = v => Math.max(5,  Math.min(100, v));
+    switch (_leDrag.dir) {
+      case 'right':  setElemPos('message', { width:  clampW(_leDrag.startWidth  + dx) }); break;
+      case 'left':   setElemPos('message', { width:  clampW(_leDrag.startWidth  - dx) }); break;
+      case 'bottom': setElemPos('message', { height: clampH(_leDrag.startHeight + dy) }); break;
+      case 'top':    setElemPos('message', { height: clampH(_leDrag.startHeight - dy) }); break;
+    }
+  } else {
+    const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+    const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
+    const nx = Math.max(2, Math.min(98, _leDrag.startPosX + dx));
+    const ny = Math.max(2, Math.min(98, _leDrag.startPosY + dy));
+    setElemPos(_leDrag.key, { x: nx, y: ny });
+  }
+  updateLeStage();
+  updateLayoutEditorControls();
+}
+
+function leDragEnd() {
+  if (!_leDrag) return;
+  document.querySelectorAll('.le-el').forEach(e => e.classList.remove('dragging'));
+  _leDrag = null;
+  // apply to viewer immediately and save
+  settings.elementPositions = { ...settings.elementPositions };
+  pushSettingsToServer();
+}
+
+function onScaleChange(key, val) {
+  setElemPos(key, { scale: parseFloat(val) });
+  updateLeStage();
+  updateLayoutEditorControls();
+  clearTimeout(_settingsPushTimer);
+  _settingsPushTimer = setTimeout(() => {
+    fetch(BASE + 'settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) }).catch(() => {});
+  }, 200);
+}
+
+function resetLayout() {
+  settings.elementPositions = JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS));
+  updateLeStage();
+  updateLayoutEditorControls();
+  pushSettingsToServer();
+}
+
+function lePreviewContent(key) {
+  const stageEl = document.getElementById('leStage');
+  const r = stageEl ? stageEl.getBoundingClientRect() : { width: 320, height: 180 };
+  const stageH = r.height, stageW = r.width;
+  // Mirror viewer font-size rules: viewer uses min(Xvw, Yvh) = min(X * stageW/100, Y * stageH/100)
+  const clockFs  = Math.min(stageW * 0.15, stageH * 0.23);
+  const timerFs  = Math.min(stageW * 0.16, stageH * 0.24);
+  const msgFs    = Math.min(stageW * 0.13, stageH * 0.18);
+  switch (key) {
+    case 'clock': {
+      const isAnalog = settings.clockStyle === 'analog';
+      return { text: isAnalog ? '◷' : (document.getElementById('timeDisplay')?.textContent || '00:00:00'), fs: isAnalog ? Math.min(stageW * 0.22, stageH * 0.38) : clockFs };
+    }
+    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: timerFs };
+    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
+    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
+    case 'message':
+      return { text: _msgDraft || sseMessage.text || 'Message', fs: msgFs };
+    default:           return { text: key, fs: timerFs };
+  }
+}
+
+function isElementOn(key) {
+  switch (key) {
+    case 'clock':      return sseShow.clock !== false;
+    case 'timer':      return sseShow.timer;
+    case 'stopwatch':  return sseShow.stopwatch;
+    case 'targetTime': return sseShow.targetTime;
+    case 'message':    return sseShow.message && sseMessage && sseMessage.visible;
+    default:           return true;
+  }
+}
+
+function updateLeStage() {
+  const stageEl = document.getElementById('leStage');
+  const sr = stageEl ? stageEl.getBoundingClientRect() : { width: 320 };
+  for (const [key, info] of Object.entries(LE_ELEMENTS)) {
+    const el = document.getElementById('le-el-' + key);
+    if (!el) continue;
+    const p = getElemPos(key);
+    el.style.left = p.x + '%';
+    el.style.top  = p.y + '%';
+    const on = isElementOn(key);
+    const { text, fs } = lePreviewContent(key);
+    el.style.opacity = on ? '1' : '0.25';
+    el.style.borderStyle = on ? 'dashed' : 'dotted';
+    if (key === 'message') {
+      el.style.transform = 'translate(-50%, -50%)';
+      el.style.width  = ((p.width  ?? 60)  / 100 * sr.width)  + 'px';
+      el.style.height = ((p.height ?? 20)  / 100 * (sr.height || sr.width * 9/16)) + 'px';
+      let span = el.querySelector('span.le-msg-content');
+      if (!span) { span = document.createElement('span'); span.className = 'le-msg-content'; el.insertBefore(span, el.firstChild); }
+      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
+      span.textContent = text;
+    } else {
+      el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
+      el.style.width  = '';
+      el.style.height = '';
+      el.innerHTML = `<span style="color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
+    }
+  }
+}
+
+function updateLayoutEditorControls() {
+  for (const key of Object.keys(LE_ELEMENTS)) {
+    const p = getElemPos(key);
+    const sr = document.getElementById('le-scale-' + key);
+    const sv = document.getElementById('le-scaleval-' + key);
+    const pv = document.getElementById('le-pos-' + key);
+    if (sr) sr.value = p.scale;
+    if (sv) sv.textContent = Math.round(p.scale * 100) + '%';
+    if (pv) {
+      const posText = Math.round(p.x) + ' / ' + Math.round(p.y);
+      pv.textContent = key === 'message' ? posText + '  ' + Math.round(p.width ?? 60) + '×' + Math.round(p.height ?? 20) : posText;
+    }
+  }
+}
+
+// ── Display settings section ───────────────────────────────────────────────
+function toggleDisplaySettings() {
+  const body = document.getElementById('displaySettingsBody');
+  const chev = document.getElementById('displaySettingsChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  if (!open) renderPresetsList();
+}
+
+// ── Presets ────────────────────────────────────────────────────────────────
+async function fetchPresets() {
+  try { return await fetch(BASE + 'presets', { cache: 'no-store' }).then(r => r.json()); }
+  catch { return {}; }
+}
+
+async function savePreset() {
+  const name = document.getElementById('presetNameInput').value.trim();
+  if (!name) return;
+  await fetch(BASE + 'presets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, settings }),
+  }).catch(() => {});
+  document.getElementById('presetNameInput').value = '';
+  renderPresetsList();
+}
+
+async function deletePreset(name) {
+  await fetch(BASE + 'presets/' + encodeURIComponent(name), { method: 'DELETE' }).catch(() => {});
+  renderPresetsList();
+}
+
+function presetViewerUrl(s) { return location.origin + BASE + '?s=' + encodeSettings(s); }
+
+async function renderPresetsList() {
+  const list = document.getElementById('presetsList');
+  if (!list) return;
+  list.innerHTML = '<li class="no-presets">Loading…</li>';
+  const presets = await fetchPresets();
+  list.innerHTML = '';
+  const names = Object.keys(presets);
+  if (!names.length) { list.innerHTML = '<li class="no-presets">No presets saved yet</li>'; return; }
+  for (const name of names) {
+    const s = presets[name];
+    const li = document.createElement('li');
+    li.className = 'preset-item';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'preset-item-name';
+    nameSpan.textContent = name;
+    nameSpan.title = 'Apply preset';
+    nameSpan.onclick = () => applySettings(s);
+    const link = document.createElement('a');
+    link.className = 'preset-item-link';
+    link.href = presetViewerUrl(s);
+    link.target = '_blank';
+    link.textContent = '↗';
+    const del = document.createElement('button');
+    del.className = 'preset-item-delete';
+    del.textContent = '×';
+    del.title = 'Delete';
+    del.onclick = () => deletePreset(name);
+    li.append(nameSpan, link, del);
+    list.appendChild(li);
+  }
+}
+
+function copySettingsUrl() {
+  const url = location.origin + BASE + '?s=' + encodeSettings(settings);
+  const btn = document.querySelector('.copy-url-btn');
+  navigator.clipboard.writeText(url)
+    .then(() => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy URL', 1500); })
+    .catch(() => prompt('Copy this URL:', url));
+}
+
+// ── Time sync ──────────────────────────────────────────────────────────────
+let timeOffset = 0;
+let synced = false;
+function serverNow() { return new Date(Date.now() + timeOffset); }
+
+async function syncTime() {
+  try {
+    const t0   = Date.now();
+    const data = await fetch(BASE + 'time', { cache: 'no-store' }).then(r => r.json());
+    const lat  = (Date.now() - t0) / 2;
+    timeOffset = data.ts + lat - Date.now();
+    synced = true;
+    const src = data.ntpSynced ? 'ntp' : 'sys';
+    const msg = `${src} ±${Math.round(lat)}ms`;
+    const si = document.getElementById('syncIndicator');
+    const ss = document.getElementById('syncStatus');
+    if (si) { si.textContent = msg; si.className = 'sync-indicator synced'; }
+    if (ss) ss.textContent = msg;
+  } catch {
+    const msg = synced ? 'sync lost' : 'no sync';
+    const si = document.getElementById('syncIndicator');
+    const ss = document.getElementById('syncStatus');
+    if (si) { si.textContent = msg; si.className = 'sync-indicator error'; }
+    if (ss) ss.textContent = msg;
+  }
+}
+syncTime();
+setInterval(syncTime, 30000);
+
+// ── Clock canvas ───────────────────────────────────────────────────────────
+const canvas = document.getElementById('clock');
+const ctx    = canvas ? canvas.getContext('2d') : null;
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function resizeCanvas() {
+  if (!canvas) return;
+  const dpr  = window.devicePixelRatio || 1;
+  const size = Math.round((canvas.getBoundingClientRect().width || 480) * dpr);
+  if (canvas.width !== size) { canvas.width = canvas.height = size; }
+}
+
+function dimHex(hex, a) {
+  const r = Math.round(parseInt(hex.slice(1,3), 16) * a);
+  const g = Math.round(parseInt(hex.slice(3,5), 16) * a);
+  const b = Math.round(parseInt(hex.slice(5,7), 16) * a);
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawClock() {
+  const now  = serverNow();
+  const p2   = n => String(n).padStart(2, '0');
+  const h    = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const tStr = `${p2(h)}:${p2(m)}:${p2(s)}`;
+  const dStr = `${DAYS[now.getDay()]}  ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+
+  const td = document.getElementById('timeDisplay');
+  const dd = document.getElementById('dateDisplay');
+  const ot = document.getElementById('opTime');
+  const od = document.getElementById('opDate');
+  if (td) td.textContent = tStr;
+  if (dd) dd.textContent = dStr;
+  if (ot) ot.textContent = tStr;
+  if (od) od.textContent = dStr;
+
+  if (!canvas || !ctx) return;
+  resizeCanvas();
+  const S  = canvas.width, sc = S / 480, cx = S / 2, cy = S / 2, r = 230 * sc;
+
+  ctx.clearRect(0, 0, S, S);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 2 * sc;
+  ctx.stroke();
+
+  const cc = settings.clockColor || '#00e676';
+
+  if (settings.showSeconds) {
     for (let i = 0; i < 60; i++) {
-      const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
-      const isFive    = i % 5 === 0;
-      const isActive  = i < s;
-      const isCurrent = i === s;
-      const inner = isFive ? r - 28 * sc : r - 18 * sc;
-      const segStart = angle - (Math.PI * 2 / 60) * 0.42;
-      const segEnd   = angle + (Math.PI * 2 / 60) * 0.42;
-
+      const ang   = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      const five  = i % 5 === 0;
+      const inner = five ? r - 28 * sc : r - 18 * sc;
+      const a0    = ang - (Math.PI * 2 / 60) * 0.42;
+      const a1    = ang + (Math.PI * 2 / 60) * 0.42;
       ctx.beginPath();
-      ctx.arc(cx, cy, r - 4 * sc, segStart, segEnd);
-      ctx.arc(cx, cy, inner, segEnd, segStart, true);
+      ctx.arc(cx, cy, r - 4 * sc, a0, a1);
+      ctx.arc(cx, cy, inner, a1, a0, true);
       ctx.closePath();
-      ctx.fillStyle = isCurrent ? '#ffffff'
-                    : isActive  ? (isFive ? '#00c853' : '#00e676')
-                                : (isFive ? '#1e1e1e' : '#161616');
+      ctx.fillStyle = i === s   ? '#ffffff'
+                    : i < s     ? dimHex(cc, five ? 0.75 : 1.0)
+                                : (five ? '#1e1e1e' : '#161616');
       ctx.fill();
     }
-
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(angle) * (r - 38 * sc), cy + Math.sin(angle) * (r - 38 * sc));
-      ctx.lineTo(cx + Math.cos(angle) * (r - 50 * sc), cy + Math.sin(angle) * (r - 50 * sc));
-      ctx.strokeStyle = '#2a2a2a';
-      ctx.lineWidth = 2 * sc;
-      ctx.stroke();
-    }
-
+  } else {
     ctx.beginPath();
-    ctx.arc(cx, cy, r - 56 * sc, 0, Math.PI * 2);
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fill();
-
-    const pad = n => String(n).padStart(2, '0');
-    document.getElementById('timeDisplay').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-    document.getElementById('dateDisplay').textContent =
-      `${DAYS[now.getDay()]}  ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+    ctx.arc(cx, cy, r - 2 * sc, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 8 * sc;
+    ctx.stroke();
   }
 
-  setInterval(drawClock, 100);
-  drawClock();
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ang) * (r - 38 * sc), cy + Math.sin(ang) * (r - 38 * sc));
+    ctx.lineTo(cx + Math.cos(ang) * (r - 50 * sc), cy + Math.sin(ang) * (r - 50 * sc));
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 2 * sc;
+    ctx.stroke();
+  }
 
-  // ── Shared Timer (server-driven via SSE) ──────────────────────────────
-  // Server owns all state. Clients receive updates via /events and send
-  // commands via POST. Between server updates, running timers count down
-  // locally using the received remaining value + local clock.
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 56 * sc, 0, Math.PI * 2);
+  ctx.fillStyle = settings.bgColor;
+  ctx.fill();
+}
 
-  let timerState = 'idle';
-  let timerLocalEndAt = null;   // local Date.now() target when running
-  let timerRemaining = 0;       // used when not running
+setInterval(drawClock, 100);
+drawClock();
 
-  // Apply viewer idle class immediately so there's no flash of the timer panel
-  if (!isOperator) document.body.classList.add('timer-unset');
+// ── SSE state ─────────────────────────────────────────────────────────────
+let sseTimer      = { mode: 'idle', remaining: 0, label: '', warnAt: 60000 };
+let sseStopwatch  = { mode: 'idle', elapsed: 0, label: '' };
+let sseTargetTime = { target: '', label: '', enabled: false };
+let sseMessage    = { text: '', visible: false, flash: false };
+let sseShow       = { clock: true, timer: false, stopwatch: false, targetTime: false, message: false };
+let _msgDraft     = '';  // operator draft text — not cleared by SSE
 
-  // ── Duration memory (server-side, expires after 12 hours) ────────────
-  fetch(BASE + 'timer/duration', { cache: 'no-store' })
-    .then(r => r.json())
-    .then(({ mins, secs }) => {
-      document.getElementById('durationMins').value = mins;
-      document.getElementById('durationSecs').value = secs;
-      if (timerState === 'idle') {
-        timerRemaining = (mins * 60 + secs) * 1000;
-        renderTimer();
-        updateTimerUnset();
+let timerRxAt   = 0, timerRxMs  = 0;
+let swRxAt      = 0, swRxMs     = 0;
+let flashTmo    = null;
+
+// ── Format helpers ─────────────────────────────────────────────────────────
+function p2(n) { return String(Math.abs(Math.floor(n))).padStart(2, '0'); }
+
+function fmtMsCeil(ms) {
+  if (ms <= 0) return '00:00';
+  const tot = Math.ceil(ms / 1000);
+  const h = Math.floor(tot / 3600), m = Math.floor((tot % 3600) / 60), s = tot % 60;
+  return h > 0 ? `${p2(h)}:${p2(m)}:${p2(s)}` : `${p2(m)}:${p2(s)}`;
+}
+
+function fmtMsFloor(ms) {
+  if (ms <= 0) return '00:00';
+  const tot = Math.floor(ms / 1000);
+  const h = Math.floor(tot / 3600), m = Math.floor((tot % 3600) / 60), s = tot % 60;
+  return h > 0 ? `${p2(h)}:${p2(m)}:${p2(s)}` : `${p2(m)}:${p2(s)}`;
+}
+
+function calcTargetMs(hhMM) {
+  if (!hhMM || !hhMM.includes(':')) return null;
+  const [h, m] = hhMM.split(':').map(Number);
+  const now = serverNow();
+  const tgt = new Date(now);
+  tgt.setHours(h, m, 0, 0);
+  let diff = tgt - now;
+  if (diff < -60000) diff += 86400000;
+  return diff;
+}
+
+function timerClass(mode, ms, t) {
+  if (mode === 'expired') return 'timer-expired';
+  if (mode === 'paused')  return 'timer-paused';
+  if (mode === 'running') {
+    if (t.warnAtEnabled  && ms <= t.warnAt)  return 'timer-warning';
+    if (t.warn2AtEnabled && ms <= t.warn2At) return 'timer-warn2';
+    return 'timer-running';
+  }
+  return 'timer-idle';
+}
+
+function swClass(mode) {
+  return mode === 'running' ? 'sw-running' : mode === 'paused' ? 'sw-paused' : 'sw-idle';
+}
+
+// ── Render loop ────────────────────────────────────────────────────────────
+function renderWidgets() {
+  const timerMs = sseTimer.mode === 'running'
+    ? Math.max(0, timerRxMs - (Date.now() - timerRxAt))
+    : sseTimer.remaining;
+
+  const swMs = sseStopwatch.mode === 'running'
+    ? swRxMs + (Date.now() - swRxAt)
+    : sseStopwatch.elapsed;
+
+  const tCls = timerClass(sseTimer.mode, timerMs, sseTimer);
+  const sCls = swClass(sseStopwatch.mode);
+
+  // Viewer widgets
+  const vwTV = document.getElementById('vwTimerValue');
+  const vwSV = document.getElementById('vwSwValue');
+  const vwTG = document.getElementById('vwTargetValue');
+
+  if (vwTV) { vwTV.textContent = fmtMsCeil(timerMs); vwTV.className = 'vw-el-value ' + tCls; }
+  if (vwSV) { vwSV.textContent = fmtMsFloor(swMs);   vwSV.className = 'vw-el-value ' + sCls; }
+
+  if (vwTG) {
+    if (sseTargetTime.enabled && sseTargetTime.target) {
+      const diff = calcTargetMs(sseTargetTime.target);
+      if (diff === null) { vwTG.textContent = '--:--'; vwTG.className = 'vw-el-value target-pending'; }
+      else if (diff >= 0) { vwTG.textContent = fmtMsCeil(diff); vwTG.className = 'vw-el-value target-pending'; }
+      else { vwTG.textContent = '+' + fmtMsFloor(-diff); vwTG.className = 'vw-el-value target-elapsed'; }
+    } else {
+      vwTG.textContent = sseTargetTime.target || '--:--';
+      vwTG.className = 'vw-el-value target-pending';
+    }
+  }
+
+  // Operator displays
+  const opTD = document.getElementById('opTimerDisplay');
+  const opSD = document.getElementById('opSwDisplay');
+  const opTG = document.getElementById('opTargetDisplay');
+
+  if (opTD) { opTD.textContent = fmtMsCeil(timerMs); opTD.className = 'op-display ' + tCls; }
+  if (opSD) { opSD.textContent = fmtMsFloor(swMs);   opSD.className = 'op-display ' + sCls; }
+
+  if (opTG) {
+    if (sseTargetTime.target) {
+      if (!sseTargetTime.enabled) {
+        opTG.textContent = sseTargetTime.target;
+        opTG.className = 'op-display target-pending';
+      } else {
+        const diff = calcTargetMs(sseTargetTime.target);
+        if (diff === null) { opTG.textContent = '--:--'; opTG.className = 'op-display'; }
+        else if (diff >= 0) { opTG.textContent = fmtMsCeil(diff);       opTG.className = 'op-display target-pending'; }
+        else                { opTG.textContent = '+' + fmtMsFloor(-diff); opTG.className = 'op-display target-elapsed'; }
       }
-    })
-    .catch(() => {});
-
-  async function saveDuration() {
-    const mins = parseInt(document.getElementById('durationMins').value) || 0;
-    const secs = parseInt(document.getElementById('durationSecs').value) || 0;
-    await fetch(BASE + 'timer/duration', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mins, secs }),
-    });
-    if (timerState === 'idle') {
-      timerRemaining = (mins * 60 + secs) * 1000;
-      renderTimer();
-    }
-    const btn = document.getElementById('saveBtn');
-    btn.textContent = 'Saved';
-    setTimeout(() => { btn.textContent = 'Save'; }, 1500);
-  }
-
-  function formatMs(ms) {
-    if (ms < 0) ms = 0;
-    const total = Math.ceil(ms / 1000);
-    return `${String(Math.floor(total / 60)).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`;
-  }
-
-  function updateTimerUnset() {
-    if (!isOperator) {
-      document.body.classList.toggle('timer-unset', timerState === 'idle' && timerRemaining === 0);
-    }
-  }
-
-  function applyState({ state, remaining }) {
-    timerState = state;
-    if (state === 'running') {
-      timerLocalEndAt = Date.now() + remaining;
     } else {
-      timerLocalEndAt = null;
-      timerRemaining = remaining;
-    }
-    renderTimer();
-    showButtons(state);
-    updateTimerUnset();
-  }
-
-  function renderTimer() {
-    const ms = timerState === 'running'
-      ? Math.max(0, timerLocalEndAt - Date.now())
-      : timerRemaining;
-    const el = document.getElementById('timerDisplay');
-    el.textContent = formatMs(ms);
-    el.className = 'timer-display ' + timerState;
-  }
-
-  setInterval(renderTimer, 100);
-
-  function showButtons(state) {
-    document.getElementById('startBtn').style.display  = state === 'idle' || state === 'expired' ? '' : 'none';
-    document.getElementById('pauseBtn').style.display  = state === 'running' ? '' : 'none';
-    document.getElementById('resumeBtn').style.display = state === 'paused'  ? '' : 'none';
-    document.getElementById('resetBtn').style.display  = state !== 'idle'    ? '' : 'none';
-    document.getElementById('startBtn').textContent    = state === 'expired' ? 'Restart' : 'Start';
-  }
-
-  async function timerCmd(cmd) {
-    const body = {};
-    if (cmd === 'start' || cmd === 'reset') {
-      body.mins = parseInt(document.getElementById('durationMins').value) || 0;
-      body.secs = parseInt(document.getElementById('durationSecs').value) || 0;
-    }
-    await fetch(BASE + `timer/${cmd}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    // State update arrives via SSE — no need to update locally
-  }
-
-  // SSE connection
-  function connectSSE() {
-    const dot = document.getElementById('connDot');
-    const es  = new EventSource(BASE + 'events');
-
-    es.onopen = () => { dot.className = 'conn-dot connected'; };
-
-    es.onmessage = e => {
-      try { applyState(JSON.parse(e.data)); }
-      catch {}
-    };
-
-    es.onerror = () => {
-      dot.className = 'conn-dot error';
-      es.close();
-      setTimeout(connectSSE, 3000); // reconnect
-    };
-  }
-
-  connectSSE();
-
-  // ── Fullscreen ────────────────────────────────────────────────────────
-  const ICON_EXPAND = `<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>`;
-  const ICON_SHRINK = `<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>`;
-
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen();
+      opTG.textContent = '--:--'; opTG.className = 'op-display target-pending';
     }
   }
+}
+setInterval(renderWidgets, 100);
 
-  document.addEventListener('fullscreenchange', () => {
-    document.getElementById('fsIcon').innerHTML =
-      document.fullscreenElement ? ICON_SHRINK : ICON_EXPAND;
+// ── Apply SSE state ────────────────────────────────────────────────────────
+function setEl(id, val) { const e = document.getElementById(id); if (e && document.activeElement !== e) e.value = val; }
+function setChk(id, val) { const e = document.getElementById(id); if (e) e.checked = val; }
+
+function applySSEState(state) {
+  if (state.timer) {
+    sseTimer  = state.timer;
+    timerRxAt = Date.now();
+    timerRxMs = state.timer.remaining;
+    updateTimerBtns(state.timer.mode);
+    setEl('timerLabel', state.timer.label || '');
+    setEl('timerWarnAt',  Math.round(state.timer.warnAt  / 60000));
+    setEl('timerWarn2At', Math.round(state.timer.warn2At / 60000));
+    setChk('timerWarnAtEnabled',  state.timer.warnAtEnabled  !== false);
+    setChk('timerWarn2AtEnabled', state.timer.warn2AtEnabled !== false);
+    const vwL = document.getElementById('vwTimerLabel');
+    if (vwL) vwL.textContent = state.timer.label || 'Timer';
+  }
+  if (state.stopwatch) {
+    sseStopwatch = state.stopwatch;
+    swRxAt = Date.now();
+    swRxMs = state.stopwatch.elapsed;
+    updateSwBtns(state.stopwatch.mode);
+    setEl('swLabel', state.stopwatch.label || '');
+    const vwL = document.getElementById('vwSwLabel');
+    if (vwL) vwL.textContent = state.stopwatch.label || 'Stopwatch';
+  }
+  if (state.targetTime) {
+    sseTargetTime = state.targetTime;
+    setEl('targetInput', state.targetTime.target || '');
+    setEl('targetLabel', state.targetTime.label || '');
+    setChk('targetEnabled', state.targetTime.enabled);
+    const vwL = document.getElementById('vwTargetLabel');
+    if (vwL) vwL.textContent = state.targetTime.label || 'Target Time';
+  }
+  if (state.message) {
+    sseMessage = state.message;
+    const txtEl  = document.getElementById('vwMsgText');
+    const msgEl  = document.getElementById('vwMessage');
+    if (txtEl) { txtEl.textContent = state.message.text; fitMessageToBox(); }
+    setEl('msgText', state.message.text);
+    setChk('showMessage', state.message.visible);
+
+    if (state.message.flash && msgEl) {
+      msgEl.classList.remove('flashing');
+      void msgEl.offsetWidth;
+      msgEl.classList.add('flashing');
+      if (flashTmo) clearTimeout(flashTmo);
+      flashTmo = setTimeout(() => msgEl.classList.remove('flashing'), 3200);
+    }
+  }
+  if (state.show) {
+    sseShow = state.show;
+    showWidget('vwClock',     state.show.clock !== false);
+    showWidget('vwTimer',     state.show.timer);
+    showWidget('vwStopwatch', state.show.stopwatch);
+    showWidget('vwTarget',    state.show.targetTime);
+    showWidget('vwMessage',   state.show.message && sseMessage && sseMessage.visible);
+    if (state.show.message && sseMessage && sseMessage.visible) fitMessageToBox();
+    setChk('showTimer',      state.show.timer);
+    setChk('showStopwatch',  state.show.stopwatch);
+    setChk('showTargetTime', state.show.targetTime);
+  }
+  if (state.displaySettings) {
+    // Viewer: apply unless pinned to a URL preset
+    // Operator: always sync panel controls (but don't apply body classes)
+    if (!settingsPinned) applySettings(state.displaySettings);
+  }
+}
+
+function showWidget(id, on) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = on ? 'flex' : 'none';
+}
+
+
+// ── SSE connection ─────────────────────────────────────────────────────────
+// Apply cached state immediately on viewer to avoid FOUC
+const _STATE_KEY = 'sc_state';
+if (!isOperator) {
+  try {
+    const cached = localStorage.getItem(_STATE_KEY);
+    if (cached) applySSEState(JSON.parse(cached));
+  } catch {}
+}
+
+function connectSSE() {
+  const dot = document.getElementById('connDot');
+  const es  = new EventSource(BASE + 'events');
+  es.onopen    = () => { if (dot) dot.className = 'conn-dot connected'; };
+  es.onmessage = e => {
+    try {
+      const state = JSON.parse(e.data);
+      applySSEState(state);
+      if (!isOperator) localStorage.setItem(_STATE_KEY, e.data);
+    } catch {}
+  };
+  es.onerror   = () => {
+    if (dot) dot.className = 'conn-dot error';
+    es.close();
+    setTimeout(connectSSE, 3000);
+  };
+}
+connectSSE();
+
+// ── Timer button states ────────────────────────────────────────────────────
+function updateTimerBtns(mode) {
+  const show = (id, on) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none'; };
+  show('timerStartBtn',  mode === 'idle' || mode === 'expired');
+  show('timerPauseBtn',  mode === 'running');
+  show('timerResumeBtn', mode === 'paused');
+  show('timerResetBtn',  mode !== 'idle');
+  const sb = document.getElementById('timerStartBtn');
+  if (sb) sb.textContent = mode === 'expired' ? 'Restart' : 'Start';
+}
+
+function updateSwBtns(mode) {
+  const show = (id, on) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none'; };
+  show('swStartBtn',  mode === 'idle');
+  show('swPauseBtn',  mode === 'running');
+  show('swResumeBtn', mode === 'paused');
+  show('swResetBtn',  mode !== 'idle');
+}
+
+// ── API helper ─────────────────────────────────────────────────────────────
+function post(path, body) {
+  return fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
+
+// ── Timer commands ─────────────────────────────────────────────────────────
+function timerStart() {
+  const mins   = parseInt(document.getElementById('timerMins').value)   || 0;
+  const secs   = parseInt(document.getElementById('timerSecs').value)   || 0;
+  const label  = document.getElementById('timerLabel').value;
+  post('timer/start', { mins, secs, label, ...readTimerWarnConfig() });
+}
+function timerPause()  { post('timer/pause', {}); }
+function timerResume() { post('timer/resume', {}); }
+function timerReset() {
+  const mins = parseInt(document.getElementById('timerMins').value) || 0;
+  const secs = parseInt(document.getElementById('timerSecs').value) || 0;
+  post('timer/reset', { mins, secs });
+}
+function readTimerWarnConfig() {
+  return {
+    warnAt:         parseInt(document.getElementById('timerWarnAt')?.value)  || 0,
+    warnAtEnabled:  document.getElementById('timerWarnAtEnabled')?.checked   ?? true,
+    warn2At:        parseInt(document.getElementById('timerWarn2At')?.value) || 0,
+    warn2AtEnabled: document.getElementById('timerWarn2AtEnabled')?.checked  ?? true,
+  };
+}
+
+function updateTimerConfig() {
+  const label = document.getElementById('timerLabel').value;
+  post('timer/config', { label, ...readTimerWarnConfig() });
+}
+
+// ── Stopwatch commands ─────────────────────────────────────────────────────
+function swStart()  { post('stopwatch/start', { label: document.getElementById('swLabel').value }); }
+function swPause()  { post('stopwatch/pause', {}); }
+function swResume() { post('stopwatch/start', {}); }
+function swReset()  { post('stopwatch/reset', {}); }
+function updateSwConfig() { post('stopwatch/config', { label: document.getElementById('swLabel').value }); }
+
+// ── Target time commands ───────────────────────────────────────────────────
+function updateTargetTime() {
+  post('target-time', {
+    target:  document.getElementById('targetInput').value,
+    label:   document.getElementById('targetLabel').value,
+    enabled: document.getElementById('targetEnabled').checked,
   });
+}
+
+// ── Message commands ───────────────────────────────────────────────────────
+function msgShow() {
+  const text = document.getElementById('msgText').value;
+  post('message', { text, visible: true });
+  // Ensure show.message is on so viewer shows it
+  const sm = document.getElementById('showMessage');
+  if (sm && !sm.checked) { sm.checked = true; setShow('message', true); }
+}
+function msgFlash() {
+  const text = document.getElementById('msgText').value;
+  post('message', { text, flash: true });
+  const sm = document.getElementById('showMessage');
+  if (sm && !sm.checked) { sm.checked = true; setShow('message', true); }
+}
+function msgClear() {
+  post('message', { visible: false, flash: false });
+}
+
+// ── Widget visibility ──────────────────────────────────────────────────────
+function setShow(widget, visible) {
+  post('show', { [widget]: visible });
+  if (widget === 'message') {
+    // Also sync message.visible
+    if (!visible) post('message', { visible: false });
+  }
+}
+
+// ── Fullscreen ─────────────────────────────────────────────────────────────
+const IC_EXP = `<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>`;
+const IC_SHR = `<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>`;
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  else document.exitFullscreen();
+}
+document.addEventListener('fullscreenchange', () => {
+  const icon = document.getElementById('fsIcon');
+  if (icon) icon.innerHTML = document.fullscreenElement ? IC_SHR : IC_EXP;
+});
+
+// Viewer: show top-right nav only when cursor is near top-right corner
+if (!isOperator) {
+  let _cornerHideTimer = null;
+  document.addEventListener('mousemove', e => {
+    const nav = document.querySelector('body.viewer .top-right');
+    if (!nav) return;
+    const near = e.clientX > window.innerWidth - 140 && e.clientY < 90;
+    if (near) {
+      clearTimeout(_cornerHideTimer);
+      nav.classList.add('corner-visible');
+    } else if (nav.classList.contains('corner-visible')) {
+      clearTimeout(_cornerHideTimer);
+      _cornerHideTimer = setTimeout(() => nav.classList.remove('corner-visible'), 800);
+    }
+  });
+}
+
+// Init operator-only sections on page load
+if (isOperator) {
+  const chev = document.getElementById('layoutEditorChevron');
+  if (chev) chev.style.transform = 'rotate(180deg)';
+  buildLeStage();
+  _leStageBuilt = true;
+  updateLayoutEditorControls();
+  _leRefreshInterval = setInterval(updateLeStage, 500);
+  renderPresetsList();
+}
 </script>
 </body>
 </html>
