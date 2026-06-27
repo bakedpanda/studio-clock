@@ -245,6 +245,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 
 @keyframes pulse    { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
 @keyframes cue-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.07; } }
+@keyframes msgLivePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
 
 /* Connection dot */
 .conn-dot {
@@ -912,7 +913,7 @@ body.custom-layout .vw-message-text {
       <div class="op-card-body">
         <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
         <div class="btn-row">
-          <button class="btn primary" onclick="msgShow()">Show</button>
+          <button class="btn primary" id="msgShowBtn" onclick="msgShowToggle()">Show</button>
           <button class="btn amber"   onclick="msgFlash()">Flash</button>
           <button class="btn danger"  onclick="msgClear()">Clear</button>
         </div>
@@ -1987,6 +1988,7 @@ function applySSEState(state) {
     if (state.message.text) setEl('msgText', state.message.text);
     setChk('showMessage', state.message.visible);
 
+    updateMsgShowBtn();
     if (state.message.flash && msgEl) {
       msgEl.classList.remove('flashing');
       void msgEl.offsetWidth;
@@ -2007,6 +2009,7 @@ function applySSEState(state) {
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
+    updateMsgShowBtn();
   }
   if (state.displaySettings) {
     // Viewer: apply unless pinned to a URL preset
@@ -2123,6 +2126,9 @@ function updateTargetTime() {
 }
 
 // ── Message commands ───────────────────────────────────────────────────────
+function msgShowToggle() {
+  if (sseShow.message && sseMessage && sseMessage.visible) { msgClear(); } else { msgShow(); }
+}
 function msgShow() {
   const text = document.getElementById('msgText').value;
   post('message', { text, visible: true });
@@ -2135,6 +2141,21 @@ function msgFlash() {
 }
 function msgClear() {
   post('message', { visible: false, flash: false });
+  post('show', { message: false });
+}
+function updateMsgShowBtn() {
+  const btn = document.getElementById('msgShowBtn');
+  if (!btn) return;
+  const live = sseShow.message && sseMessage && sseMessage.visible;
+  if (live) {
+    btn.textContent = '⬛ LIVE — Click to Hide';
+    btn.className = 'btn';
+    btn.style.cssText = 'background:#ff1744;color:#fff;font-weight:700;letter-spacing:0.05em;flex:2;animation:msgLivePulse 1.4s ease-in-out infinite;';
+  } else {
+    btn.textContent = 'Show';
+    btn.className = 'btn primary';
+    btn.style.cssText = '';
+  }
 }
 
 // ── Widget visibility ──────────────────────────────────────────────────────
