@@ -980,6 +980,10 @@ body.custom-layout .vw-message-text {
           <button class="btn-sm" onclick="fitMessageScale()" style="margin-left:4px;padding:2px 6px;font-size:11px">Fit</button>
           <span class="le-pos-val" id="le-pos-message">50/50</span>
         </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:0 2px">
+          <span style="color:#ff9800;font-size:11px;white-space:nowrap;min-width:70px">Preview text</span>
+          <textarea id="le-msg-preview" rows="2" placeholder="Type preview message…" oninput="updateLeStage()" style="flex:1;background:#1a1a1a;color:#e0e0e0;border:1px solid #ff980060;border-radius:4px;padding:4px 6px;font-size:11px;resize:vertical;font-family:inherit"></textarea>
+        </div>
       </div>
     </div>
   </div>
@@ -1107,8 +1111,8 @@ document.body.classList.add(isOperator ? 'operator' : 'viewer');
 const DEFAULT_ELEMENT_POSITIONS = {
   clock:      { x: 50, y: 21,  scale: 1.5  },
   timer:      { x: 16, y: 50,  scale: 0.7  },
-  stopwatch:  { x: 50, y: 76,  scale: 0.9  },
-  targetTime: { x: 50, y: 50,  scale: 0.7  },
+  stopwatch:  { x: 50, y: 50,  scale: 0.7  },
+  targetTime: { x: 84, y: 50,  scale: 0.7  },
   message:    { x: 50, y: 50,  scale: 1.0,  width: 60, height: 20 },
 };
 
@@ -1303,12 +1307,11 @@ function applyCustomLayout() {
 function fitMessageToBox(scale) {
   const box = document.getElementById('vwMessage');
   const txt = box?.querySelector('.vw-message-text');
-  if (!box || !txt) return;
+  if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
   const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
-  txt.style.fontSize = '';
-  // Binary search: find the max size that fits the box, then apply scale fraction
-  let lo = 6, hi = parseFloat(getComputedStyle(txt).fontSize) * 2;
-  for (let i = 0; i < 14; i++) {
+  // Binary search from large value down to find max size that fits the box
+  let lo = 6, hi = 400;
+  for (let i = 0; i < 16; i++) {
     const mid = (lo + hi) / 2;
     txt.style.fontSize = mid + 'px';
     if (txt.scrollHeight > box.clientHeight || txt.scrollWidth > box.clientWidth) {
@@ -1497,7 +1500,11 @@ function lePreviewContent(key) {
     case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: timerFs };
     case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
     case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
-    case 'message':    return { text: document.getElementById('vwMsgText')?.textContent    || 'Message',  fs: msgFs  };
+    case 'message': {
+      const preview = document.getElementById('le-msg-preview')?.value;
+      const live    = document.getElementById('vwMsgText')?.textContent || '';
+      return { text: preview || live || 'Message', fs: msgFs };
+    }
     default:           return { text: key, fs: timerFs };
   }
 }
@@ -1926,6 +1933,7 @@ function applySSEState(state) {
     showWidget('vwStopwatch', state.show.stopwatch);
     showWidget('vwTarget',    state.show.targetTime);
     showWidget('vwMessage',   state.show.message && sseMessage && sseMessage.visible);
+    if (state.show.message && sseMessage && sseMessage.visible) fitMessageToBox();
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);

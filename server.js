@@ -114,8 +114,8 @@ const displaySettings = {
   elementPositions: {
     clock:      { x: 50, y: 21, scale: 1.5 },
     timer:      { x: 16, y: 50, scale: 0.7 },
-    stopwatch:  { x: 50, y: 76, scale: 0.9 },
-    targetTime: { x: 50, y: 50, scale: 0.7 },
+    stopwatch:  { x: 50, y: 50, scale: 0.7 },
+    targetTime: { x: 84, y: 50, scale: 0.7 },
     message:    { x: 50, y: 50, scale: 1.0, width: 60, height: 20 },
   },
 };
