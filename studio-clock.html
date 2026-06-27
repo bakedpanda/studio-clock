@@ -1323,7 +1323,7 @@ function applyCustomLayout() {
 }
 
 function fitMessageToBox(scale) {
-  requestAnimationFrame(() => {
+  document.fonts.ready.then(() => requestAnimationFrame(() => {
     const box = document.getElementById('vwMessage');
     const txt = box?.querySelector('.vw-message-text');
     if (!box || !txt) return;
@@ -1359,7 +1359,7 @@ function fitMessageToBox(scale) {
     }
     document.body.removeChild(probe);
     txt.style.fontSize = Math.max(8, Math.floor(best * s)) + 'px';
-  });
+  }));
 }
 
 function fitMessageScale() {
@@ -1966,7 +1966,7 @@ function applySSEState(state) {
     const txtEl  = document.getElementById('vwMsgText');
     const msgEl  = document.getElementById('vwMessage');
     if (txtEl) { txtEl.textContent = state.message.text; fitMessageToBox(); }
-    setEl('msgText', state.message.text);
+    if (state.message.text) setEl('msgText', state.message.text);
     setChk('showMessage', state.message.visible);
 
     if (state.message.flash && msgEl) {
