@@ -44,6 +44,17 @@ body.viewer   .operator-only { display: none !important; }
   z-index: 100;
 }
 
+/* Viewer: hide buttons until cursor is near top-right corner */
+body.viewer .top-right {
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+body.viewer .top-right.corner-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .nav-btn {
   background: rgba(20,20,20,0.92);
   border: 1px solid #2a2a2a;
@@ -2010,6 +2021,23 @@ document.addEventListener('fullscreenchange', () => {
   const icon = document.getElementById('fsIcon');
   if (icon) icon.innerHTML = document.fullscreenElement ? IC_SHR : IC_EXP;
 });
+
+// Viewer: show top-right nav only when cursor is near top-right corner
+if (!isOperator) {
+  let _cornerHideTimer = null;
+  document.addEventListener('mousemove', e => {
+    const nav = document.querySelector('body.viewer .top-right');
+    if (!nav) return;
+    const near = e.clientX > window.innerWidth - 140 && e.clientY < 90;
+    if (near) {
+      clearTimeout(_cornerHideTimer);
+      nav.classList.add('corner-visible');
+    } else if (nav.classList.contains('corner-visible')) {
+      clearTimeout(_cornerHideTimer);
+      _cornerHideTimer = setTimeout(() => nav.classList.remove('corner-visible'), 800);
+    }
+  });
+}
 
 // Init operator-only sections on page load
 if (isOperator) {
