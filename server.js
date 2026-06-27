@@ -106,7 +106,7 @@ const displaySettings = {
   chromakey:        false,
   viewerLayout:     'auto',
   clockStyle:       'digital',
-  customLayout:     false,
+  customLayout:     true,
   timerColor:       '#ffd600',
   stopwatchColor:   '#4fc3f7',
   targetColor:      '#ffffff',

@@ -1020,10 +1020,6 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
     <div class="op-section-header" onclick="toggleLayoutEditor()">
       <span class="op-section-title">Layout Editor</span>
       <div style="display:flex;align-items:center;gap:12px;">
-        <label class="le-enable-label" onclick="event.stopPropagation()">
-          <input type="checkbox" id="leCustomLayout" onchange="onLeToggle()">
-          <span>Custom Layout</span>
-        </label>
         <button class="btn-sm" onclick="event.stopPropagation();resetLayout()">Reset</button>
         <span class="section-chevron" id="layoutEditorChevron">▾</span>
       </div>
@@ -1131,7 +1127,7 @@ const DEFAULT_SETTINGS = {
   chromakey:        false,
   viewerLayout:     'auto',
   clockStyle:       'digital',
-  customLayout:     false,
+  customLayout:     true,
   timerColor:       '#ffd600',
   stopwatchColor:   '#4fc3f7',
   targetColor:      '#ffffff',
@@ -1213,7 +1209,6 @@ function applySettings(s) {
   const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
   const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
   const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
-  const le = el('leCustomLayout');      if (le) le.checked = settings.customLayout;
   setColorPair('Bg',    settings.bgColor);
   setColorPair('Clock', settings.clockColor);
   setColorPair('Text',  settings.textColor);
@@ -1235,7 +1230,7 @@ function readSettingsFromPanel() {
     chromakey:        g('settingChromakey')?.checked   ?? settings.chromakey,
     viewerLayout:     settings.viewerLayout,
     clockStyle:       g('settingClockStyle')?.value    ?? settings.clockStyle,
-    customLayout:     settings.customLayout,
+    customLayout:     true,
     elementPositions: settings.elementPositions,
   };
 }
@@ -1287,16 +1282,7 @@ function updateNavLinks() {
 
 // ── Custom layout (viewer) ─────────────────────────────────────────────────
 function applyCustomLayout() {
-  const use = settings.customLayout;
-  document.body.classList.toggle('custom-layout', use);
-  const ids = ['vwClock','vwTimer','vwStopwatch','vwTarget','vwMessage'];
-  if (!use) {
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el) { el.style.left = ''; el.style.top = ''; el.style.transform = ''; el.style.display = ''; }
-    }
-    return;
-  }
+  document.body.classList.add('custom-layout');
   const pos = settings.elementPositions;
   const map = { clock: 'vwClock', timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
   for (const [key, id] of Object.entries(map)) {
@@ -1340,10 +1326,6 @@ function toggleLayoutEditor() {
   }
 }
 
-function onLeToggle() {
-  settings.customLayout = document.getElementById('leCustomLayout').checked;
-  pushSettingsToServer();
-}
 
 function buildLeStage() {
   const stage = document.getElementById('leStage');
