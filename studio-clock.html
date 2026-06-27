@@ -646,7 +646,11 @@ body.custom-layout #vwMessage {
 body.custom-layout .vw-message-text {
   white-space: pre-wrap;
   text-align: center;
-  font-size: calc(min(13vw, 18vh) * var(--msg-scale, 1));
+  font-size: min(
+    calc(min(13vw, 18vh) * var(--msg-scale, 1)),
+    calc(var(--msg-box-h, 20vh) * 0.65),
+    calc(var(--msg-box-w, 60vw) * 0.22)
+  );
   width: 100%;
   max-width: unset;
 }
@@ -1292,9 +1296,13 @@ function applyCustomLayout() {
     el.style.top  = pos[key].y + '%';
     if (key === 'message') {
       el.style.transform = 'translate(-50%, -50%)';
-      el.style.width  = (pos[key].width  ?? 60) + '%';
-      el.style.height = (pos[key].height ?? 20) + '%';
-      el.style.setProperty('--msg-scale', pos[key].scale ?? 1.0);
+      const mw = pos[key].width  ?? 60;
+      const mh = pos[key].height ?? 20;
+      el.style.width  = mw + '%';
+      el.style.height = mh + '%';
+      el.style.setProperty('--msg-scale',  pos[key].scale ?? 1.0);
+      el.style.setProperty('--msg-box-w',  mw + 'vw');
+      el.style.setProperty('--msg-box-h',  mh + 'vh');
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
       el.style.width  = '';
