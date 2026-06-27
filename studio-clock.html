@@ -1291,12 +1291,32 @@ function applyCustomLayout() {
       el.style.setProperty('--msg-scale',  pos[key].scale ?? 1.0);
       el.style.setProperty('--msg-box-w',  mw + 'vw');
       el.style.setProperty('--msg-box-h',  mh + 'vh');
+      fitMessageToBox();
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
       el.style.width  = '';
       el.style.height = '';
     }
   }
+}
+
+function fitMessageToBox() {
+  const box = document.getElementById('vwMessage');
+  const txt = box?.querySelector('.vw-message-text');
+  if (!box || !txt) return;
+  txt.style.fontSize = '';  // let CSS compute the initial size
+  // Binary search: shrink until text fits inside the box
+  let lo = 6, hi = parseFloat(getComputedStyle(txt).fontSize);
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    txt.style.fontSize = mid + 'px';
+    if (txt.scrollHeight > box.clientHeight || txt.scrollWidth > box.clientWidth) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  txt.style.fontSize = Math.floor(lo) + 'px';
 }
 
 // ── Layout editor ──────────────────────────────────────────────────────────
@@ -1876,7 +1896,7 @@ function applySSEState(state) {
     sseMessage = state.message;
     const txtEl  = document.getElementById('vwMsgText');
     const msgEl  = document.getElementById('vwMessage');
-    if (txtEl) txtEl.textContent = state.message.text;
+    if (txtEl) { txtEl.textContent = state.message.text; fitMessageToBox(); }
     setEl('msgText', state.message.text);
     setChk('showMessage', state.message.visible);
 
