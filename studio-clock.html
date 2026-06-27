@@ -59,7 +59,7 @@ body.viewer .top-right.corner-visible {
   background: rgba(20,20,20,0.92);
   border: 1px solid #2a2a2a;
   border-radius: 6px;
-  color: #555;
+  color: #888;
   cursor: pointer;
   font-family: inherit;
   font-size: 11px;
@@ -78,7 +78,7 @@ body.viewer .top-right.corner-visible {
   background: rgba(20,20,20,0.92);
   border: 1px solid #2a2a2a;
   border-radius: 6px;
-  color: #555;
+  color: #888;
   cursor: pointer;
   padding: 8px;
   line-height: 0;
@@ -300,7 +300,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   align-items: center;
   gap: 10px;
   font-size: 10px;
-  color: #333;
+  color: #777;
   letter-spacing: 1px;
 }
 .op-status-item { display: flex; align-items: center; gap: 5px; }
@@ -336,7 +336,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 .op-card-title {
   font-size: 9px;
   letter-spacing: 3px;
-  color: #3a3a3a;
+  color: #777;
   text-transform: uppercase;
 }
 
@@ -391,7 +391,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 }
 .sw-toggle input:checked + .sw-track { background: #003d20; border-color: #00693a; }
 .sw-toggle input:checked + .sw-track::after { left: 16px; background: #00e676; }
-.sw-label { font-size: 10px; color: #3a3a3a; letter-spacing: 1px; text-transform: uppercase; }
+.sw-label { font-size: 10px; color: #777; letter-spacing: 1px; text-transform: uppercase; }
 .sw-toggle input:checked ~ .sw-label { color: #00e676; }
 
 /* Operator current value display */
@@ -428,13 +428,13 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 }
 .op-input-row label {
   font-size: 9px;
-  color: #3a3a3a;
+  color: #777;
   letter-spacing: 2px;
   text-transform: uppercase;
   flex-shrink: 0;
   min-width: 44px;
 }
-.op-input-row span { font-size: 11px; color: #2a2a2a; }
+.op-input-row span { font-size: 11px; color: #888; }
 
 /* Buttons */
 .btn {
@@ -516,13 +516,13 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   display: flex; align-items: center; gap: 6px;
   background: #141414; border: 1px solid #1c1c1c; border-radius: 4px; padding: 7px 8px;
 }
-.preset-item-name { flex: 1; font-size: 11px; color: #999; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset-item-name { flex: 1; font-size: 11px; color: #aaa; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .preset-item-name:hover { color: #fff; }
-.preset-item-link { color: #2a2a2a; font-size: 12px; text-decoration: none; flex-shrink: 0; }
+.preset-item-link { color: #555; font-size: 12px; text-decoration: none; flex-shrink: 0; }
 .preset-item-link:hover { color: #00e676; }
-.preset-item-delete { color: #242424; cursor: pointer; font-size: 16px; line-height: 1; background: none; border: none; padding: 0 2px; flex-shrink: 0; transition: color 0.15s; }
+.preset-item-delete { color: #555; cursor: pointer; font-size: 16px; line-height: 1; background: none; border: none; padding: 0 2px; flex-shrink: 0; transition: color 0.15s; }
 .preset-item-delete:hover { color: #ff1744; }
-.no-presets { font-size: 10px; color: #242424; padding: 4px 0; }
+.no-presets { font-size: 10px; color: #666; padding: 4px 0; }
 
 /* ────────────────────────────────────────────────────
    OPERATOR SECTIONS (display settings + layout editor)
@@ -549,13 +549,13 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 .op-section-title {
   font-size: 9px;
   letter-spacing: 3px;
-  color: #2a2a2a;
+  color: #777;
   text-transform: uppercase;
 }
 
 .section-chevron {
   font-size: 12px;
-  color: #2a2a2a;
+  color: #666;
   transition: transform 0.2s;
 }
 .section-open .section-chevron { transform: rotate(180deg); }
@@ -581,7 +581,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 .ds-group-title {
   font-size: 9px;
   letter-spacing: 3px;
-  color: #2a2a2a;
+  color: #666;
   text-transform: uppercase;
   margin-bottom: 2px;
   border-bottom: 1px solid #181818;
@@ -597,7 +597,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 
 .ds-label {
   font-size: 11px;
-  color: #555;
+  color: #999;
   letter-spacing: 0.5px;
   flex: 1;
 }
@@ -735,7 +735,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 
 .le-scale-val {
   font-size: 10px;
-  color: #444;
+  color: #888;
   width: 34px;
   text-align: right;
   flex-shrink: 0;
@@ -743,7 +743,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 
 .le-pos-val {
   font-size: 10px;
-  color: #2a2a2a;
+  color: #777;
   width: 52px;
   text-align: right;
   flex-shrink: 0;
