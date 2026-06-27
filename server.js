@@ -279,7 +279,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET'  && pathname === '/settings') return json(res, displaySettings);
   if (req.method === 'POST' && pathname === '/settings') {
     return parseBody(req, body => {
-      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','customLayout','timerColor','stopwatchColor','targetColor','messageColor','elementPositions'];
+      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','customLayout','timerColor','stopwatchColor','targetColor','messageColor','messageLineHeight','elementPositions'];
       for (const k of keys) if (k in body) displaySettings[k] = body[k];
       saveState();
       broadcast(snapshot());

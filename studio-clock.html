@@ -978,6 +978,11 @@ body.custom-layout .vw-message-text {
           <button class="btn-sm" onclick="fitMessageScale()" style="margin-left:4px;padding:2px 6px;font-size:11px">Fit</button>
           <span class="le-pos-val" id="le-pos-message">50/50</span>
         </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ff9800">Line ht</span>
+          <input type="range" class="le-scale-range" id="le-lineheight-message" min="0.8" max="2.0" step="0.05" value="1.1" oninput="onLineHeightChange(this.value)">
+          <span class="le-scale-val" id="le-lineheightval-message">1.10</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1003,6 +1008,13 @@ body.custom-layout .vw-message-text {
             <span class="ds-label">Seconds ring</span>
             <label class="sw-toggle">
               <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
+              <span class="sw-track"></span>
+            </label>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Show clock</span>
+            <label class="sw-toggle">
+              <input type="checkbox" id="showClock" onchange="setShow('clock', this.checked)" checked>
               <span class="sw-track"></span>
             </label>
           </div>
@@ -1123,6 +1135,7 @@ const DEFAULT_SETTINGS = {
   stopwatchColor:   '#4fc3f7',
   targetColor:      '#ffffff',
   messageColor:     '#ffffff',
+  messageLineHeight: 1.1,
   elementPositions: JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS)),
 };
 
@@ -1208,6 +1221,14 @@ function applySettings(s) {
   const gcp = el('targetColorPick');    if (gcp) gcp.value = settings.targetColor    || '#ffffff';
   const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
 
+  const lh = settings.messageLineHeight ?? 1.1;
+  const lhSlider = el('le-lineheight-message');
+  const lhVal    = el('le-lineheightval-message');
+  if (lhSlider) lhSlider.value = lh;
+  if (lhVal)    lhVal.textContent = lh.toFixed(2);
+  const msgTxt = document.getElementById('vwMsgText');
+  if (msgTxt) { msgTxt.style.lineHeight = lh; fitMessageToBox(); }
+
   updateNavLinks();
 }
 
@@ -1289,6 +1310,8 @@ function applyCustomLayout() {
       el.style.height = mh + '%';
       el.style.setProperty('--msg-box-w',  mw + 'vw');
       el.style.setProperty('--msg-box-h',  mh + 'vh');
+      const msgTxtEl = el.querySelector('.vw-message-text');
+      if (msgTxtEl) msgTxtEl.style.lineHeight = settings.messageLineHeight ?? 1.1;
       fitMessageToBox(pos[key].scale ?? 1.0);
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
@@ -1303,7 +1326,9 @@ function fitMessageToBox(scale) {
     const box = document.getElementById('vwMessage');
     const txt = box?.querySelector('.vw-message-text');
     if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
-    const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
+    const s  = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
+    const lh = settings.messageLineHeight ?? 1.1;
+    txt.style.lineHeight = lh;
     const maxW = box.clientWidth;
     const maxH = box.clientHeight;
 
@@ -1311,7 +1336,7 @@ function fitMessageToBox(scale) {
     const probe = document.createElement('div');
     probe.style.cssText = `position:fixed;top:-9999px;left:0;visibility:hidden;` +
       `width:${maxW}px;white-space:pre-wrap;overflow-wrap:break-word;word-wrap:break-word;` +
-      `font-family:'Roboto Mono',monospace;font-weight:700;line-height:1.1;` +
+      `font-family:'Roboto Mono',monospace;font-weight:700;line-height:${lh};` +
       `padding:0;margin:0;box-sizing:border-box;`;
     probe.textContent = txt.textContent || ' ';
     document.body.appendChild(probe);
@@ -1336,6 +1361,20 @@ function fitMessageScale() {
   if (val) val.textContent = '100%';
   applyCustomLayout();
   pushSettingsToServer();
+}
+
+function onLineHeightChange(val) {
+  const lh = parseFloat(val);
+  settings.messageLineHeight = lh;
+  const txt = document.getElementById('vwMsgText');
+  if (txt) txt.style.lineHeight = lh;
+  const display = document.getElementById('le-lineheightval-message');
+  if (display) display.textContent = lh.toFixed(2);
+  fitMessageToBox();
+  clearTimeout(_settingsPushTimer);
+  _settingsPushTimer = setTimeout(() => {
+    fetch(BASE + 'settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) }).catch(() => {});
+  }, 200);
 }
 
 // ── Layout editor ──────────────────────────────────────────────────────────
@@ -1937,6 +1976,7 @@ function applySSEState(state) {
     showWidget('vwTarget',    state.show.targetTime);
     showWidget('vwMessage',   state.show.message && sseMessage && sseMessage.visible);
     if (state.show.message && sseMessage && sseMessage.visible) fitMessageToBox();
+    setChk('showClock',      state.show.clock !== false);
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
