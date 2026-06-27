@@ -1242,8 +1242,9 @@ function readSettingsFromPanel() {
     chromakey:        g('settingChromakey')?.checked   ?? settings.chromakey,
     viewerLayout:     settings.viewerLayout,
     clockStyle:       g('settingClockStyle')?.value    ?? settings.clockStyle,
-    customLayout:     true,
-    elementPositions: settings.elementPositions,
+    customLayout:        true,
+    messageLineHeight:   settings.messageLineHeight ?? 1.1,
+    elementPositions:    settings.elementPositions,
   };
 }
 
@@ -1325,12 +1326,20 @@ function fitMessageToBox(scale) {
   requestAnimationFrame(() => {
     const box = document.getElementById('vwMessage');
     const txt = box?.querySelector('.vw-message-text');
-    if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
+    if (!box || !txt) return;
     const s  = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
     const lh = settings.messageLineHeight ?? 1.1;
     txt.style.lineHeight = lh;
-    const maxW = box.clientWidth;
-    const maxH = box.clientHeight;
+    // clientWidth/Height are 0 when display:none; fall back to inline % styles
+    let maxW = box.clientWidth;
+    let maxH = box.clientHeight;
+    if (!maxW || !maxH) {
+      const wPct = parseFloat(box.style.width);
+      const hPct = parseFloat(box.style.height);
+      if (!wPct || !hPct) return;
+      maxW = wPct / 100 * window.innerWidth;
+      maxH = hPct / 100 * window.innerHeight;
+    }
 
     // Measure in an off-screen probe to avoid flex/overflow interference
     const probe = document.createElement('div');
@@ -2099,15 +2108,12 @@ function updateTargetTime() {
 function msgShow() {
   const text = document.getElementById('msgText').value;
   post('message', { text, visible: true });
-  // Ensure show.message is on so viewer shows it
-  const sm = document.getElementById('showMessage');
-  if (sm && !sm.checked) { sm.checked = true; setShow('message', true); }
+  post('show', { message: true });
 }
 function msgFlash() {
   const text = document.getElementById('msgText').value;
   post('message', { text, flash: true });
-  const sm = document.getElementById('showMessage');
-  if (sm && !sm.checked) { sm.checked = true; setShow('message', true); }
+  post('show', { message: true });
 }
 function msgClear() {
   post('message', { visible: false, flash: false });
