@@ -645,14 +645,12 @@ body.custom-layout #vwMessage {
 }
 body.custom-layout .vw-message-text {
   white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   text-align: center;
-  font-size: min(
-    calc(min(13vw, 18vh) * var(--msg-scale, 1)),
-    calc(var(--msg-box-h, 20vh) * 0.65),
-    calc(var(--msg-box-w, 60vw) * 0.22)
-  );
   width: 100%;
   max-width: unset;
+  box-sizing: border-box;
 }
 
 /* ────────────────────────────────────────────────────
@@ -1306,18 +1304,15 @@ function fitMessageToBox(scale) {
     const txt = box?.querySelector('.vw-message-text');
     if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
     const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
-    // Binary search from large value down to find max size that fits the box
-    let lo = 6, hi = 400;
-    for (let i = 0; i < 16; i++) {
-      const mid = (lo + hi) / 2;
+    let lo = 8, hi = 400, best = lo;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
       txt.style.fontSize = mid + 'px';
-      if (txt.scrollHeight > box.clientHeight || txt.scrollWidth > box.clientWidth) {
-        hi = mid;
-      } else {
-        lo = mid;
-      }
+      const fits = txt.scrollWidth <= box.clientWidth && txt.scrollHeight <= box.clientHeight;
+      if (fits) { best = mid; lo = mid + 1; }
+      else       { hi = mid - 1; }
     }
-    txt.style.fontSize = Math.floor(lo * s) + 'px';
+    txt.style.fontSize = Math.max(8, Math.floor(best * s)) + 'px';
   });
 }
 
