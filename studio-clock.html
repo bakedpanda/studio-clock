@@ -980,10 +980,6 @@ body.custom-layout .vw-message-text {
           <button class="btn-sm" onclick="fitMessageScale()" style="margin-left:4px;padding:2px 6px;font-size:11px">Fit</button>
           <span class="le-pos-val" id="le-pos-message">50/50</span>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;padding:0 2px">
-          <span style="color:#ff9800;font-size:11px;white-space:nowrap;min-width:70px">Preview text</span>
-          <textarea id="le-msg-preview" rows="2" placeholder="Type preview message…" oninput="updateLeStage()" style="flex:1;background:#1a1a1a;color:#e0e0e0;border:1px solid #ff980060;border-radius:4px;padding:4px 6px;font-size:11px;resize:vertical;font-family:inherit"></textarea>
-        </div>
       </div>
     </div>
   </div>
@@ -1501,9 +1497,8 @@ function lePreviewContent(key) {
     case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
     case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
     case 'message': {
-      const preview = document.getElementById('le-msg-preview')?.value;
-      const live    = document.getElementById('vwMsgText')?.textContent || '';
-      return { text: preview || live || 'Message', fs: msgFs };
+      const live = document.getElementById('vwMsgText')?.textContent || '';
+      return { text: live || 'Message', fs: msgFs };
     }
     default:           return { text: key, fs: timerFs };
   }
@@ -1534,12 +1529,14 @@ function updateLeStage() {
     el.style.opacity = on ? '1' : '0.25';
     el.style.borderStyle = on ? 'dashed' : 'dotted';
     if (key === 'message') {
+      el.style.opacity = '1';
+      el.style.borderStyle = 'dashed';
       el.style.transform = 'translate(-50%, -50%)';
       el.style.width  = ((p.width  ?? 60)  / 100 * sr.width)  + 'px';
       el.style.height = ((p.height ?? 20)  / 100 * (sr.height || sr.width * 9/16)) + 'px';
       let span = el.querySelector('span.le-msg-content');
       if (!span) { span = document.createElement('span'); span.className = 'le-msg-content'; el.insertBefore(span, el.firstChild); }
-      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
+      span.style.cssText = `color:${info.color};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
       span.textContent = text;
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
