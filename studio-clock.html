@@ -669,6 +669,26 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 .le-el:hover    { box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
 .le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
 
+/* Message resize handle */
+.le-msg-resize {
+  position: absolute;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.le-msg-resize::after {
+  content: '';
+  width: 3px;
+  height: 24px;
+  background: rgba(255,152,0,0.6);
+  border-radius: 2px;
+}
+
 /* Scale sliders below stage */
 .le-sliders {
   display: grid;
@@ -1064,7 +1084,7 @@ const DEFAULT_ELEMENT_POSITIONS = {
   timer:      { x: 20, y: 76,  scale: 0.9  },
   stopwatch:  { x: 50, y: 76,  scale: 0.9  },
   targetTime: { x: 80, y: 76,  scale: 0.9  },
-  message:    { x: 50, y: 88,  scale: 0.85 },
+  message:    { x: 50, y: 88,  scale: 0.85, width: 60 },
 };
 
 const DEFAULT_SETTINGS = {
@@ -1239,6 +1259,9 @@ function applyCustomLayout() {
       el.style.left = pos[key].x + '%';
       el.style.top  = pos[key].y + '%';
       el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
+      if (key === 'message') {
+        el.style.width = (pos[key].width ?? 60) + '%';
+      }
     }
   }
 }
@@ -1288,6 +1311,13 @@ function buildLeStage() {
     stage.appendChild(el);
     el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
     el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
+    if (key === 'message') {
+      const handle = document.createElement('div');
+      handle.className = 'le-msg-resize';
+      handle.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e); }, { passive: false });
+      handle.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e); }, { passive: false });
+      el.appendChild(handle);
+    }
   }
   stage.addEventListener('mousemove',  leDragMove);
   stage.addEventListener('mouseup',    leDragEnd);
@@ -1318,8 +1348,19 @@ function leStartDrag(e, key) {
   const sr = stage.getBoundingClientRect();
   const cp = e.touches ? e.touches[0] : e;
   const p = getElemPos(key);
-  _leDrag = { key, startX: cp.clientX, startY: cp.clientY, startPosX: p.x, startPosY: p.y, stageW: sr.width, stageH: sr.height };
+  _leDrag = { mode: 'move', key, startX: cp.clientX, startY: cp.clientY, startPosX: p.x, startPosY: p.y, stageW: sr.width, stageH: sr.height };
   const el = document.getElementById('le-el-' + key);
+  if (el) el.classList.add('dragging');
+}
+
+function leStartResize(e) {
+  e.preventDefault();
+  const stage = document.getElementById('leStage');
+  const sr = stage.getBoundingClientRect();
+  const cp = e.touches ? e.touches[0] : e;
+  const p = getElemPos('message');
+  _leDrag = { mode: 'resize', key: 'message', startX: cp.clientX, startWidth: p.width ?? 60, stageW: sr.width };
+  const el = document.getElementById('le-el-message');
   if (el) el.classList.add('dragging');
 }
 
@@ -1327,11 +1368,17 @@ function leDragMove(e) {
   if (!_leDrag) return;
   e.preventDefault();
   const cp = e.touches ? e.touches[0] : e;
-  const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
-  const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
-  const nx = Math.max(2, Math.min(98, _leDrag.startPosX + dx));
-  const ny = Math.max(2, Math.min(98, _leDrag.startPosY + dy));
-  setElemPos(_leDrag.key, { x: nx, y: ny });
+  if (_leDrag.mode === 'resize') {
+    const dw = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100 * 2; // *2 because drag expands both sides
+    const nw = Math.max(10, Math.min(98, _leDrag.startWidth + dw));
+    setElemPos('message', { width: nw });
+  } else {
+    const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+    const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
+    const nx = Math.max(2, Math.min(98, _leDrag.startPosX + dx));
+    const ny = Math.max(2, Math.min(98, _leDrag.startPosY + dy));
+    setElemPos(_leDrag.key, { x: nx, y: ny });
+  }
   updateLeStage();
   updateLayoutEditorControls();
 }
@@ -1395,6 +1442,8 @@ function isElementOn(key) {
 }
 
 function updateLeStage() {
+  const stageEl = document.getElementById('leStage');
+  const sr = stageEl ? stageEl.getBoundingClientRect() : { width: 320 };
   for (const [key, info] of Object.entries(LE_ELEMENTS)) {
     const el = document.getElementById('le-el-' + key);
     if (!el) continue;
@@ -1404,10 +1453,20 @@ function updateLeStage() {
     el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
     const on = isElementOn(key);
     const { text, fs } = lePreviewContent(key);
-    // Show all elements in editor; dim those that are currently off-display
     el.style.opacity = on ? '1' : '0.25';
     el.style.borderStyle = on ? 'dashed' : 'dotted';
-    el.innerHTML = `<span style="color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
+    if (key === 'message') {
+      const w = p.width ?? 60;
+      el.style.width = (w / 100 * sr.width) + 'px';
+      // Re-inject content but keep the resize handle
+      let span = el.querySelector('span.le-msg-content');
+      if (!span) { span = document.createElement('span'); span.className = 'le-msg-content'; el.insertBefore(span, el.firstChild); }
+      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;`;
+      span.textContent = text;
+    } else {
+      el.style.width = '';
+      el.innerHTML = `<span style="color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
+    }
   }
 }
 
@@ -1419,7 +1478,10 @@ function updateLayoutEditorControls() {
     const pv = document.getElementById('le-pos-' + key);
     if (sr) sr.value = p.scale;
     if (sv) sv.textContent = Math.round(p.scale * 100) + '%';
-    if (pv) pv.textContent = Math.round(p.x) + ' / ' + Math.round(p.y);
+    if (pv) {
+      const posText = Math.round(p.x) + ' / ' + Math.round(p.y);
+      pv.textContent = key === 'message' ? posText + '  w:' + Math.round(p.width ?? 60) + '%' : posText;
+    }
   }
 }
 
