@@ -642,7 +642,6 @@ body.custom-layout .vw-page {
   padding: 0;
 }
 body.custom-layout .vw-el {
-  display: flex !important;
   position: absolute;
   width: auto;
   transform-origin: center;
@@ -1259,13 +1258,6 @@ function applyCustomLayout() {
       const el = document.getElementById(id);
       if (el) { el.style.left = ''; el.style.top = ''; el.style.transform = ''; el.style.display = ''; }
     }
-    // Re-apply visibility from last known state
-    showWidget('vwClock',     sseShow.clock !== false);
-    showWidget('vwTimer',     sseShow.timer);
-    showWidget('vwStopwatch', sseShow.stopwatch);
-    showWidget('vwTarget',    sseShow.targetTime);
-    showWidget('vwMessage',   sseShow.message && sseMessage && sseMessage.visible);
-    applyViewerFocus();
     return;
   }
   const pos = settings.elementPositions;
@@ -1421,6 +1413,17 @@ function lePreviewContent(key) {
   }
 }
 
+function isElementOn(key) {
+  switch (key) {
+    case 'clock':      return sseShow.clock !== false;
+    case 'timer':      return sseShow.timer;
+    case 'stopwatch':  return sseShow.stopwatch;
+    case 'targetTime': return sseShow.targetTime;
+    case 'message':    return sseShow.message && sseMessage && sseMessage.visible;
+    default:           return true;
+  }
+}
+
 function updateLeStage() {
   for (const [key, info] of Object.entries(LE_ELEMENTS)) {
     const el = document.getElementById('le-el-' + key);
@@ -1429,8 +1432,12 @@ function updateLeStage() {
     el.style.left = p.x + '%';
     el.style.top  = p.y + '%';
     el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
+    const on = isElementOn(key);
     const { text, fs } = lePreviewContent(key);
-    el.innerHTML = `<span style="color:${info.color};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
+    // Show all elements in editor; dim those that are currently off-display
+    el.style.opacity = on ? '1' : '0.25';
+    el.style.borderStyle = on ? 'dashed' : 'dotted';
+    el.innerHTML = `<span style="color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
   }
 }
 
@@ -1841,7 +1848,6 @@ function applySSEState(state) {
 }
 
 function showWidget(id, on) {
-  if (settings.customLayout) return; // custom layout: CSS handles display, position controls visibility
   const el = document.getElementById(id);
   if (el) el.style.display = on ? 'flex' : 'none';
 }
