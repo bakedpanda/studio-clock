@@ -1380,8 +1380,8 @@ function leDragMove(e) {
   e.preventDefault();
   const cp = e.touches ? e.touches[0] : e;
   if (_leDrag.mode === 'resize') {
-    const dw = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100 * 2; // *2 because drag expands both sides
-    const nw = Math.max(10, Math.min(98, _leDrag.startWidth + dw));
+    const dw = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+    const nw = Math.max(10, Math.min(100, _leDrag.startWidth + dw));
     setElemPos('message', { width: nw });
   } else {
     const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
