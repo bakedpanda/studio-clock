@@ -59,11 +59,14 @@ setInterval(syncNTP, SYNC_INTERVAL_MS);
 // All mutable state is in flat objects so snapshot() can spread them cleanly.
 
 const timer = {
-  mode: 'idle',     // idle | running | paused | expired
-  remaining: 0,     // ms remaining when not running
-  endAt: null,      // absolute ms target when running
+  mode: 'idle',          // idle | running | paused | expired
+  remaining: 0,          // ms remaining when not running
+  endAt: null,           // absolute ms target when running
   label: '',
-  warnAt: 60000,    // ms — color-warn viewers when under this
+  warnAt: 60000,         // ms — close-warn threshold (red)
+  warnAtEnabled: true,   // whether close-warn is active
+  warn2At: 300000,       // ms — early-warn threshold (orange)
+  warn2AtEnabled: true,  // whether early-warn is active
 };
 
 const stopwatch = {
@@ -137,10 +140,13 @@ function broadcast(data) {
 function snapshot() {
   return {
     timer: {
-      mode:      timer.mode,
-      remaining: timer.mode === 'running' ? Math.max(0, timer.endAt - Date.now()) : timer.remaining,
-      label:     timer.label,
-      warnAt:    timer.warnAt,
+      mode:           timer.mode,
+      remaining:      timer.mode === 'running' ? Math.max(0, timer.endAt - Date.now()) : timer.remaining,
+      label:          timer.label,
+      warnAt:         timer.warnAt,
+      warnAtEnabled:  timer.warnAtEnabled,
+      warn2At:        timer.warn2At,
+      warn2AtEnabled: timer.warn2AtEnabled,
     },
     stopwatch: {
       mode:    stopwatch.mode,
@@ -199,8 +205,11 @@ function loadState() {
   try {
     const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     if (saved.displaySettings) Object.assign(displaySettings, saved.displaySettings);
-    if (saved.timerLabel  !== undefined) timer.label  = saved.timerLabel;
-    if (saved.timerWarnAt !== undefined) timer.warnAt = saved.timerWarnAt;
+    if (saved.timerLabel          !== undefined) timer.label          = saved.timerLabel;
+    if (saved.timerWarnAt         !== undefined) timer.warnAt         = saved.timerWarnAt;
+    if (saved.timerWarnAtEnabled  !== undefined) timer.warnAtEnabled  = saved.timerWarnAtEnabled;
+    if (saved.timerWarn2At        !== undefined) timer.warn2At        = saved.timerWarn2At;
+    if (saved.timerWarn2AtEnabled !== undefined) timer.warn2AtEnabled = saved.timerWarn2AtEnabled;
     if (saved.swLabel     !== undefined) stopwatch.label = saved.swLabel;
     if (saved.targetTime)  Object.assign(targetTime, saved.targetTime);
     if (saved.message)     Object.assign(message,    { text: saved.message.text || '', visible: false, flash: false });
@@ -212,8 +221,11 @@ function loadState() {
 function saveState() {
   const data = {
     displaySettings: { ...displaySettings },
-    timerLabel:  timer.label,
-    timerWarnAt: timer.warnAt,
+    timerLabel:          timer.label,
+    timerWarnAt:         timer.warnAt,
+    timerWarnAtEnabled:  timer.warnAtEnabled,
+    timerWarn2At:        timer.warn2At,
+    timerWarn2AtEnabled: timer.warn2AtEnabled,
     swLabel:     stopwatch.label,
     targetTime:  { ...targetTime },
     message:     { text: message.text },
@@ -310,8 +322,11 @@ const server = http.createServer((req, res) => {
       const duration = (mins * 60 + secs) * 1000;
       if (duration > 0) {
         clearExpiredTimeout();
-        if (body.label  !== undefined) timer.label  = String(body.label).slice(0, 60);
-        if (body.warnAt !== undefined) timer.warnAt = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
+        if (body.label          !== undefined) timer.label          = String(body.label).slice(0, 60);
+        if (body.warnAt         !== undefined) timer.warnAt         = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
+        if (body.warnAtEnabled  !== undefined) timer.warnAtEnabled  = !!body.warnAtEnabled;
+        if (body.warn2At        !== undefined) timer.warn2At        = Math.max(0, parseInt(body.warn2At) || 0) * 1000;
+        if (body.warn2AtEnabled !== undefined) timer.warn2AtEnabled = !!body.warn2AtEnabled;
         timer.mode = 'running'; timer.remaining = duration; timer.endAt = Date.now() + duration;
         broadcast(snapshot());
       }
@@ -350,8 +365,11 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && pathname === '/timer/config') {
     return parseBody(req, body => {
-      if (body.label  !== undefined) timer.label  = String(body.label).slice(0, 60);
-      if (body.warnAt !== undefined) timer.warnAt = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
+      if (body.label          !== undefined) timer.label          = String(body.label).slice(0, 60);
+      if (body.warnAt         !== undefined) timer.warnAt         = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
+      if (body.warnAtEnabled  !== undefined) timer.warnAtEnabled  = !!body.warnAtEnabled;
+      if (body.warn2At        !== undefined) timer.warn2At        = Math.max(0, parseInt(body.warn2At) || 0) * 1000;
+      if (body.warn2AtEnabled !== undefined) timer.warn2AtEnabled = !!body.warn2AtEnabled;
       saveState();
       broadcast(snapshot());
       noContent(res);

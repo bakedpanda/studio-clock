@@ -216,7 +216,8 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 /* Timer color states */
 .timer-idle    { color: #444; }
 .timer-running { color: #ffd600; }
-.timer-warning { color: #ff6d00; }
+.timer-warn2   { color: #ff6d00; }  /* early warning (orange) */
+.timer-warning { color: #ff1744; }  /* close warning (red)    */
 .timer-paused  { color: #888; }
 .timer-expired { color: #ff1744; animation: pulse 0.9s ease-in-out infinite; }
 
@@ -812,10 +813,24 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
           <span>sec</span>
         </div>
         <div class="op-input-row">
-          <label>Warn at</label>
+          <label class="sw-toggle" style="min-width:unset;gap:5px;">
+            <input type="checkbox" id="timerWarn2AtEnabled" checked onchange="updateTimerConfig()">
+            <span class="sw-track"></span>
+          </label>
+          <input type="number" class="op-input" id="timerWarn2At" value="5" min="0" max="99"
+            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
+          <span>min</span>
+          <span style="color:#ff6d00;font-size:16px;line-height:1;">●</span>
+        </div>
+        <div class="op-input-row">
+          <label class="sw-toggle" style="min-width:unset;gap:5px;">
+            <input type="checkbox" id="timerWarnAtEnabled" checked onchange="updateTimerConfig()">
+            <span class="sw-track"></span>
+          </label>
           <input type="number" class="op-input" id="timerWarnAt" value="1" min="0" max="99"
             onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
-          <span>min before end</span>
+          <span>min</span>
+          <span style="color:#ff1744;font-size:16px;line-height:1;">●</span>
         </div>
         <div class="btn-row">
           <button class="btn primary" id="timerStartBtn"  onclick="timerStart()">Start</button>
@@ -1710,10 +1725,14 @@ function calcTargetMs(hhMM) {
   return diff;
 }
 
-function timerClass(mode, ms, warnAt) {
+function timerClass(mode, ms, t) {
   if (mode === 'expired') return 'timer-expired';
   if (mode === 'paused')  return 'timer-paused';
-  if (mode === 'running') return ms <= warnAt ? 'timer-warning' : 'timer-running';
+  if (mode === 'running') {
+    if (t.warnAtEnabled  && ms <= t.warnAt)  return 'timer-warning';
+    if (t.warn2AtEnabled && ms <= t.warn2At) return 'timer-warn2';
+    return 'timer-running';
+  }
   return 'timer-idle';
 }
 
@@ -1731,7 +1750,7 @@ function renderWidgets() {
     ? swRxMs + (Date.now() - swRxAt)
     : sseStopwatch.elapsed;
 
-  const tCls = timerClass(sseTimer.mode, timerMs, sseTimer.warnAt);
+  const tCls = timerClass(sseTimer.mode, timerMs, sseTimer);
   const sCls = swClass(sseStopwatch.mode);
 
   // Viewer widgets
@@ -1791,7 +1810,10 @@ function applySSEState(state) {
     timerRxMs = state.timer.remaining;
     updateTimerBtns(state.timer.mode);
     setEl('timerLabel', state.timer.label || '');
-    setEl('timerWarnAt', Math.round(state.timer.warnAt / 60000));
+    setEl('timerWarnAt',  Math.round(state.timer.warnAt  / 60000));
+    setEl('timerWarn2At', Math.round(state.timer.warn2At / 60000));
+    setChk('timerWarnAtEnabled',  state.timer.warnAtEnabled  !== false);
+    setChk('timerWarn2AtEnabled', state.timer.warn2AtEnabled !== false);
     const vwL = document.getElementById('vwTimerLabel');
     if (vwL) vwL.textContent = state.timer.label || 'Timer';
   }
@@ -1919,9 +1941,8 @@ function post(path, body) {
 function timerStart() {
   const mins   = parseInt(document.getElementById('timerMins').value)   || 0;
   const secs   = parseInt(document.getElementById('timerSecs').value)   || 0;
-  const warnAt = parseInt(document.getElementById('timerWarnAt').value) || 0;
   const label  = document.getElementById('timerLabel').value;
-  post('timer/start', { mins, secs, label, warnAt });
+  post('timer/start', { mins, secs, label, ...readTimerWarnConfig() });
 }
 function timerPause()  { post('timer/pause', {}); }
 function timerResume() { post('timer/resume', {}); }
@@ -1930,10 +1951,18 @@ function timerReset() {
   const secs = parseInt(document.getElementById('timerSecs').value) || 0;
   post('timer/reset', { mins, secs });
 }
+function readTimerWarnConfig() {
+  return {
+    warnAt:         parseInt(document.getElementById('timerWarnAt')?.value)  || 0,
+    warnAtEnabled:  document.getElementById('timerWarnAtEnabled')?.checked   ?? true,
+    warn2At:        parseInt(document.getElementById('timerWarn2At')?.value) || 0,
+    warn2AtEnabled: document.getElementById('timerWarn2AtEnabled')?.checked  ?? true,
+  };
+}
+
 function updateTimerConfig() {
-  const label  = document.getElementById('timerLabel').value;
-  const warnAt = parseInt(document.getElementById('timerWarnAt').value) || 0;
-  post('timer/config', { label, warnAt });
+  const label = document.getElementById('timerLabel').value;
+  post('timer/config', { label, ...readTimerWarnConfig() });
 }
 
 // ── Stopwatch commands ─────────────────────────────────────────────────────
