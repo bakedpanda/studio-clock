@@ -11,10 +11,14 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-color:    #0a0a0a;
-  --clock-color: #00e676;
-  --text-color:  #ffffff;
-  --clock-size:  min(min(92vw, 92vh), 480px);
+  --bg-color:        #0a0a0a;
+  --clock-color:     #00e676;
+  --text-color:      #ffffff;
+  --clock-size:      min(min(92vw, 92vh), 480px);
+  --timer-color:     #ffd600;
+  --stopwatch-color: #4fc3f7;
+  --target-color:    #ffffff;
+  --message-color:   #ffffff;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -181,21 +185,6 @@ body.clock-digital .clock-center {
 }
 body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px); letter-spacing: 0.06em; }
 
-/* ── Focus modes ── */
-body.focus-timer   #vwClock,
-body.focus-stopwatch #vwClock { display: none !important; }
-body.focus-timer   #vwStopwatch,
-body.focus-timer   #vwTarget,
-body.focus-timer   #vwMessage,
-body.focus-stopwatch #vwTimer,
-body.focus-stopwatch #vwTarget,
-body.focus-stopwatch #vwMessage { display: none !important; }
-body.focus-timer   #vwTimer     { display: flex !important; }
-body.focus-stopwatch #vwStopwatch { display: flex !important; }
-body.focus-timer   #vwTimer .vw-el-value,
-body.focus-stopwatch #vwStopwatch .vw-el-value {
-  font-size: clamp(72px, min(22vw, 30vh), 360px) !important;
-}
 
 /* ── Viewer element values ── */
 .vw-el-value {
@@ -209,7 +198,7 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 .vw-message-text {
   font-size: clamp(28px, min(13vw, 18vh), 240px);
   font-weight: 700;
-  color: var(--text-color);
+  color: var(--message-color);
   text-align: center;
   line-height: 1.25;
   word-break: break-word;
@@ -218,20 +207,23 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 
 /* Timer color states */
 .timer-idle    { color: #444; }
-.timer-running { color: #ffd600; }
-.timer-warn2   { color: #ff6d00; }  /* early warning (orange) */
-.timer-warning { color: #ff1744; }  /* close warning (red)    */
+.timer-running { color: var(--timer-color); }
+.timer-warn2   { color: #ff6d00; }
+.timer-warning { color: #ff1744; }
 .timer-paused  { color: #888; }
 .timer-expired { color: #ff1744; animation: pulse 0.9s ease-in-out infinite; }
 
 /* Stopwatch colors */
 .sw-idle    { color: #444; }
-.sw-running { color: #4fc3f7; }
+.sw-running { color: var(--stopwatch-color); }
 .sw-paused  { color: #888; }
 
 /* Target time colors */
-.target-pending { color: #ce93d8; }
-.target-elapsed { color: #555; }
+.target-pending { color: var(--target-color); }
+.target-elapsed { color: color-mix(in srgb, var(--target-color) 40%, #000); }
+
+/* Message color */
+.vw-message-text { color: var(--message-color); }
 
 /* Flash animation */
 #vwMessage.flashing .vw-message-text {
@@ -334,6 +326,19 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
   color: #3a3a3a;
   text-transform: uppercase;
 }
+
+/* Colour swatch in card header */
+.widget-color {
+  width: 22px;
+  height: 22px;
+  padding: 1px 2px;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #181818;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.widget-color:hover { border-color: #555; }
 
 .op-card-body {
   padding: 12px 14px;
@@ -795,6 +800,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Countdown Timer</span>
+        <input type="color" class="widget-color" id="timerColorPick" value="#ffd600" title="Timer colour" oninput="onWidgetColorChange('timer',this.value)">
         <label class="sw-toggle">
           <input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)">
           <span class="sw-track"></span>
@@ -848,6 +854,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Target Time</span>
+        <input type="color" class="widget-color" id="targetColorPick" value="#ffffff" title="Target colour" oninput="onWidgetColorChange('target',this.value)">
         <label class="sw-toggle">
           <input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)">
           <span class="sw-track"></span>
@@ -879,6 +886,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Stopwatch</span>
+        <input type="color" class="widget-color" id="stopwatchColorPick" value="#4fc3f7" title="Stopwatch colour" oninput="onWidgetColorChange('stopwatch',this.value)">
         <label class="sw-toggle">
           <input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)">
           <span class="sw-track"></span>
@@ -905,6 +913,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Message / Cue</span>
+        <input type="color" class="widget-color" id="messageColorPick" value="#ffffff" title="Message colour" oninput="onWidgetColorChange('message',this.value)">
         <label class="sw-toggle">
           <input type="checkbox" id="showMessage" onchange="setShow('message', this.checked)">
           <span class="sw-track"></span>
@@ -955,14 +964,6 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
               <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
               <span class="sw-track"></span>
             </label>
-          </div>
-          <div class="ds-row">
-            <span class="ds-label">Focus mode</span>
-            <select id="settingViewerFocus" onchange="onSettingChange()">
-              <option value="clock">Clock</option>
-              <option value="timer">Countdown Timer</option>
-              <option value="stopwatch">Stopwatch</option>
-            </select>
           </div>
           <div class="ds-row">
             <span class="ds-label">Chromakey</span>
@@ -1128,8 +1129,11 @@ const DEFAULT_SETTINGS = {
   chromakey:        false,
   viewerLayout:     'auto',
   clockStyle:       'digital',
-  viewerFocus:      'clock',
   customLayout:     false,
+  timerColor:       '#ffd600',
+  stopwatchColor:   '#4fc3f7',
+  targetColor:      '#ffffff',
+  messageColor:     '#ffffff',
   elementPositions: JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS)),
 };
 
@@ -1185,9 +1189,13 @@ function applySettings(s) {
     ...s,
     elementPositions: { ...DEFAULT_SETTINGS.elementPositions, ...(s.elementPositions || {}) },
   };
-  document.documentElement.style.setProperty('--bg-color',    settings.bgColor);
-  document.documentElement.style.setProperty('--clock-color', settings.clockColor);
-  document.documentElement.style.setProperty('--text-color',  settings.textColor);
+  document.documentElement.style.setProperty('--bg-color',        settings.bgColor);
+  document.documentElement.style.setProperty('--clock-color',     settings.clockColor);
+  document.documentElement.style.setProperty('--text-color',      settings.textColor);
+  document.documentElement.style.setProperty('--timer-color',     settings.timerColor     || '#ffd600');
+  document.documentElement.style.setProperty('--stopwatch-color', settings.stopwatchColor || '#4fc3f7');
+  document.documentElement.style.setProperty('--target-color',    settings.targetColor    || '#ffffff');
+  document.documentElement.style.setProperty('--message-color',   settings.messageColor   || '#ffffff');
 
   // Visual body classes only affect the viewer page
   if (!isOperator) {
@@ -1195,8 +1203,6 @@ function applySettings(s) {
     document.body.classList.toggle('clock-digital', settings.clockStyle === 'digital');
     for (const l of ['sidebar','column','row']) document.body.classList.remove('layout-' + l);
     if (settings.viewerLayout !== 'auto') document.body.classList.add('layout-' + settings.viewerLayout);
-    for (const f of ['timer','stopwatch']) document.body.classList.remove('focus-' + f);
-    if (settings.viewerFocus !== 'clock') document.body.classList.add('focus-' + settings.viewerFocus);
     applyCustomLayout();
   }
 
@@ -1205,11 +1211,14 @@ function applySettings(s) {
   const sc = el('settingShowSeconds');  if (sc) sc.checked = settings.showSeconds;
   const ck = el('settingChromakey');    if (ck) ck.checked = settings.chromakey;
   const cs = el('settingClockStyle');   if (cs) cs.value   = settings.clockStyle;
-  const vf = el('settingViewerFocus');  if (vf) vf.value   = settings.viewerFocus;
   const le = el('leCustomLayout');      if (le) le.checked = settings.customLayout;
   setColorPair('Bg',    settings.bgColor);
   setColorPair('Clock', settings.clockColor);
   setColorPair('Text',  settings.textColor);
+  const tcp = el('timerColorPick');     if (tcp) tcp.value = settings.timerColor     || '#ffd600';
+  const scp = el('stopwatchColorPick'); if (scp) scp.value = settings.stopwatchColor || '#4fc3f7';
+  const gcp = el('targetColorPick');    if (gcp) gcp.value = settings.targetColor    || '#ffffff';
+  const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
 
   updateNavLinks();
   applyViewerFocus();
@@ -1225,10 +1234,19 @@ function readSettingsFromPanel() {
     chromakey:        g('settingChromakey')?.checked   ?? settings.chromakey,
     viewerLayout:     settings.viewerLayout,
     clockStyle:       g('settingClockStyle')?.value    ?? settings.clockStyle,
-    viewerFocus:      g('settingViewerFocus')?.value   ?? settings.viewerFocus,
     customLayout:     settings.customLayout,
     elementPositions: settings.elementPositions,
   };
+}
+
+function onWidgetColorChange(key, value) {
+  const fieldMap = { timer: 'timerColor', stopwatch: 'stopwatchColor', target: 'targetColor', message: 'messageColor' };
+  const cssMap   = { timer: '--timer-color', stopwatch: '--stopwatch-color', target: '--target-color', message: '--message-color' };
+  const field = fieldMap[key];
+  if (!field) return;
+  settings[field] = value;
+  document.documentElement.style.setProperty(cssMap[key], value);
+  pushSettingsToServer();
 }
 
 let _settingsPushTimer = null;
@@ -1422,7 +1440,10 @@ function lePreviewContent(key) {
   const timerFs  = Math.min(stageW * 0.16, stageH * 0.24);
   const msgFs    = Math.min(stageW * 0.13, stageH * 0.18);
   switch (key) {
-    case 'clock':      return { text: document.getElementById('timeDisplay')?.textContent || '00:00:00', fs: clockFs };
+    case 'clock': {
+      const isAnalog = settings.clockStyle === 'analog';
+      return { text: isAnalog ? '◷' : (document.getElementById('timeDisplay')?.textContent || '00:00:00'), fs: isAnalog ? Math.min(stageW * 0.22, stageH * 0.38) : clockFs };
+    }
     case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: timerFs };
     case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
     case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
@@ -1877,11 +1898,6 @@ function showWidget(id, on) {
   if (el) el.style.display = on ? 'flex' : 'none';
 }
 
-function applyViewerFocus() {
-  const f = settings.viewerFocus;
-  if (f === 'timer')     showWidget('vwTimer', true);
-  if (f === 'stopwatch') showWidget('vwStopwatch', true);
-}
 
 // ── SSE connection ─────────────────────────────────────────────────────────
 // Apply cached state immediately on viewer to avoid FOUC

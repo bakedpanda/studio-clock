@@ -106,8 +106,11 @@ const displaySettings = {
   chromakey:        false,
   viewerLayout:     'auto',
   clockStyle:       'digital',
-  viewerFocus:      'clock',
   customLayout:     false,
+  timerColor:       '#ffd600',
+  stopwatchColor:   '#4fc3f7',
+  targetColor:      '#ffffff',
+  messageColor:     '#ffffff',
   elementPositions: {
     clock:      { x: 50, y: 44, scale: 1.0 },
     timer:      { x: 20, y: 76, scale: 0.9 },
@@ -276,7 +279,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET'  && pathname === '/settings') return json(res, displaySettings);
   if (req.method === 'POST' && pathname === '/settings') {
     return parseBody(req, body => {
-      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','viewerFocus','customLayout','elementPositions'];
+      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','customLayout','timerColor','stopwatchColor','targetColor','messageColor','elementPositions'];
       for (const k of keys) if (k in body) displaySettings[k] = body[k];
       saveState();
       broadcast(snapshot());
@@ -284,7 +287,7 @@ const server = http.createServer((req, res) => {
     });
   }
   if (req.method === 'POST' && pathname === '/settings/reset') {
-    Object.assign(displaySettings, { showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff', chromakey: false, viewerLayout: 'auto', clockStyle: 'digital', viewerFocus: 'clock', customLayout: false, elementPositions: { clock: { x: 50, y: 44, scale: 1.0 }, timer: { x: 20, y: 76, scale: 0.9 }, stopwatch: { x: 50, y: 76, scale: 0.9 }, targetTime: { x: 80, y: 76, scale: 0.9 }, message: { x: 50, y: 88, scale: 0.85 } } });
+    Object.assign(displaySettings, { showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff', chromakey: false, viewerLayout: 'auto', clockStyle: 'digital', viewerFocus: 'clock', customLayout: false, timerColor: '#ffd600', stopwatchColor: '#4fc3f7', targetColor: '#ffffff', messageColor: '#ffffff', elementPositions: { clock: { x: 50, y: 44, scale: 1.0 }, timer: { x: 20, y: 76, scale: 0.9 }, stopwatch: { x: 50, y: 76, scale: 0.9 }, targetTime: { x: 80, y: 76, scale: 0.9 }, message: { x: 50, y: 88, scale: 0.85 } } });
     saveState();
     broadcast(snapshot());
     return noContent(res);
