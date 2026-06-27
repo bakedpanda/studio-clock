@@ -908,7 +908,6 @@ body.custom-layout .vw-message-text {
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Message / Cue</span>
-        <input type="color" class="widget-color" id="messageColorPick" value="#ffffff" title="Message colour" oninput="onWidgetColorChange('message',this.value)">
       </div>
       <div class="op-card-body">
         <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
@@ -1034,6 +1033,14 @@ body.custom-layout .vw-message-text {
               <input type="text" id="settingTextColorText" class="color-text" value="#ffffff" onblur="onColorTextChange('Text')" onkeydown="if(event.key==='Enter')onColorTextChange('Text')">
             </div>
           </div>
+          <div class="ds-row">
+            <span class="ds-label">Message</span>
+            <div class="color-group">
+              <input type="color" id="messageColorPick" value="#ffffff" oninput="onWidgetColorChange('message',this.value)">
+              <input type="text" id="messageColorText" class="color-text" value="#ffffff"
+                onblur="onMessageColorText()" onkeydown="if(event.key==='Enter')onMessageColorText()">
+            </div>
+          </div>
         </div>
         <div class="ds-group">
           <div class="ds-group-title">Presets</div>
@@ -1100,11 +1107,11 @@ document.body.classList.add(isOperator ? 'operator' : 'viewer');
 
 // ── Settings (viewer display preferences) ─────────────────────────────────
 const DEFAULT_ELEMENT_POSITIONS = {
-  clock:      { x: 50, y: 21,  scale: 1.5  },
-  timer:      { x: 16, y: 50,  scale: 0.7  },
-  stopwatch:  { x: 50, y: 50,  scale: 0.7  },
-  targetTime: { x: 84, y: 50,  scale: 0.7  },
-  message:    { x: 50, y: 80,  scale: 1.0,  width: 100, height: 40 },
+  clock:      { x: 50, y: 16,  scale: 1.25 },
+  timer:      { x: 49, y: 41,  scale: 0.6  },
+  stopwatch:  { x: 17, y: 40,  scale: 0.6  },
+  targetTime: { x: 82, y: 41,  scale: 0.6  },
+  message:    { x: 50, y: 74,  scale: 1.0,  width: 88, height: 45 },
 };
 
 const DEFAULT_SETTINGS = {
@@ -1207,6 +1214,7 @@ function applySettings(s) {
   const scp = el('stopwatchColorPick'); if (scp) scp.value = settings.stopwatchColor || '#4fc3f7';
   const gcp = el('targetColorPick');    if (gcp) gcp.value = settings.targetColor    || '#ffffff';
   const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
+  const mct = el('messageColorText');   if (mct) mct.value = settings.messageColor   || '#ffffff';
 
   const lh = settings.messageLineHeight ?? 1.1;
   const lhSlider = el('le-lineheight-message');
@@ -1233,6 +1241,15 @@ function readSettingsFromPanel() {
     messageLineHeight:   settings.messageLineHeight ?? 1.1,
     elementPositions:    settings.elementPositions,
   };
+}
+
+function onMessageColorText() {
+  const input = document.getElementById('messageColorText');
+  let val = input.value.trim();
+  if (/^[0-9a-fA-F]{3,6}$/.test(val)) { val = '#' + val; input.value = val; }
+  const hex = cssColorToHex(val);
+  if (hex) { document.getElementById('messageColorPick').value = hex; onWidgetColorChange('message', hex); input.classList.remove('invalid'); }
+  else input.classList.add('invalid');
 }
 
 function onWidgetColorChange(key, value) {
