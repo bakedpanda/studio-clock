@@ -924,7 +924,7 @@ body.custom-layout .vw-message-text {
         </label>
       </div>
       <div class="op-card-body">
-        <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="updateLeStage()"></textarea>
+        <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
         <div class="btn-row">
           <button class="btn primary" onclick="msgShow()">Show</button>
           <button class="btn amber"   onclick="msgFlash()">Flash</button>
@@ -1301,22 +1301,24 @@ function applyCustomLayout() {
 }
 
 function fitMessageToBox(scale) {
-  const box = document.getElementById('vwMessage');
-  const txt = box?.querySelector('.vw-message-text');
-  if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
-  const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
-  // Binary search from large value down to find max size that fits the box
-  let lo = 6, hi = 400;
-  for (let i = 0; i < 16; i++) {
-    const mid = (lo + hi) / 2;
-    txt.style.fontSize = mid + 'px';
-    if (txt.scrollHeight > box.clientHeight || txt.scrollWidth > box.clientWidth) {
-      hi = mid;
-    } else {
-      lo = mid;
+  requestAnimationFrame(() => {
+    const box = document.getElementById('vwMessage');
+    const txt = box?.querySelector('.vw-message-text');
+    if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
+    const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
+    // Binary search from large value down to find max size that fits the box
+    let lo = 6, hi = 400;
+    for (let i = 0; i < 16; i++) {
+      const mid = (lo + hi) / 2;
+      txt.style.fontSize = mid + 'px';
+      if (txt.scrollHeight > box.clientHeight || txt.scrollWidth > box.clientWidth) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
     }
-  }
-  txt.style.fontSize = Math.floor(lo * s) + 'px';
+    txt.style.fontSize = Math.floor(lo * s) + 'px';
+  });
 }
 
 function fitMessageScale() {
@@ -1496,11 +1498,8 @@ function lePreviewContent(key) {
     case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: timerFs };
     case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
     case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
-    case 'message': {
-      const typed = document.getElementById('msgText')?.value || '';
-      const live  = document.getElementById('vwMsgText')?.textContent || '';
-      return { text: typed || live || 'Message', fs: msgFs };
-    }
+    case 'message':
+      return { text: _msgDraft || sseMessage.text || 'Message', fs: msgFs };
     default:           return { text: key, fs: timerFs };
   }
 }
@@ -1764,6 +1763,7 @@ let sseStopwatch  = { mode: 'idle', elapsed: 0, label: '' };
 let sseTargetTime = { target: '', label: '', enabled: false };
 let sseMessage    = { text: '', visible: false, flash: false };
 let sseShow       = { clock: true, timer: false, stopwatch: false, targetTime: false, message: false };
+let _msgDraft     = '';  // operator draft text — not cleared by SSE
 
 let timerRxAt   = 0, timerRxMs  = 0;
 let swRxAt      = 0, swRxMs     = 0;
