@@ -1012,12 +1012,16 @@ body.custom-layout .vw-message-text {
           <div class="ds-group-title">Colours</div>
           <div class="ds-row">
             <span class="ds-label">Background</span>
-            <div class="color-group">
-              <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
-              <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
-              <button title="Black" onclick="setColorPair('Bg','#000000');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#000000;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
-              <button title="White" onclick="setColorPair('Bg','#ffffff');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#ffffff;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
-              <button title="Chroma green" onclick="setColorPair('Bg','#00b140');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#00b140;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div class="color-group">
+                <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
+                <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button title="Black" onclick="setColorPair('Bg','#000000');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#000000;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+                <button title="White" onclick="setColorPair('Bg','#ffffff');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#ffffff;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+                <button title="Chroma green" onclick="setColorPair('Bg','#00b140');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#00b140;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+              </div>
             </div>
           </div>
           <div class="ds-row">
