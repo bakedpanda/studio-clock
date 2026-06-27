@@ -924,7 +924,7 @@ body.custom-layout .vw-message-text {
         </label>
       </div>
       <div class="op-card-body">
-        <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200"></textarea>
+        <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="updateLeStage()"></textarea>
         <div class="btn-row">
           <button class="btn primary" onclick="msgShow()">Show</button>
           <button class="btn amber"   onclick="msgFlash()">Flash</button>
@@ -1497,8 +1497,9 @@ function lePreviewContent(key) {
     case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
     case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
     case 'message': {
-      const live = document.getElementById('vwMsgText')?.textContent || '';
-      return { text: live || 'Message', fs: msgFs };
+      const typed = document.getElementById('msgText')?.value || '';
+      const live  = document.getElementById('vwMsgText')?.textContent || '';
+      return { text: typed || live || 'Message', fs: msgFs };
     }
     default:           return { text: key, fs: timerFs };
   }
@@ -1529,14 +1530,12 @@ function updateLeStage() {
     el.style.opacity = on ? '1' : '0.25';
     el.style.borderStyle = on ? 'dashed' : 'dotted';
     if (key === 'message') {
-      el.style.opacity = '1';
-      el.style.borderStyle = 'dashed';
       el.style.transform = 'translate(-50%, -50%)';
       el.style.width  = ((p.width  ?? 60)  / 100 * sr.width)  + 'px';
       el.style.height = ((p.height ?? 20)  / 100 * (sr.height || sr.width * 9/16)) + 'px';
       let span = el.querySelector('span.le-msg-content');
       if (!span) { span = document.createElement('span'); span.className = 'le-msg-content'; el.insertBefore(span, el.firstChild); }
-      span.style.cssText = `color:${info.color};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
+      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
       span.textContent = text;
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
