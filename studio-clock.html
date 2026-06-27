@@ -2135,13 +2135,11 @@ function msgShowToggle() {
 }
 function msgShow() {
   const text = document.getElementById('msgText').value;
-  post('message', { text, visible: true });
-  post('show', { message: true });
+  post('message', { text, visible: true }).then(() => post('show', { message: true }));
 }
 function msgFlash() {
   const text = document.getElementById('msgText').value;
-  post('message', { text, flash: true });
-  post('show', { message: true });
+  post('message', { text, flash: true }).then(() => post('show', { message: true }));
 }
 function msgClear() {
   post('message', { visible: false, flash: false });
@@ -2165,10 +2163,6 @@ function updateMsgShowBtn() {
 // ── Widget visibility ──────────────────────────────────────────────────────
 function setShow(widget, visible) {
   post('show', { [widget]: visible });
-  if (widget === 'message') {
-    // Also sync message.visible
-    if (!visible) post('message', { visible: false });
-  }
 }
 
 // ── Fullscreen ─────────────────────────────────────────────────────────────
