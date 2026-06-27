@@ -638,7 +638,18 @@ body.custom-layout .vw-el {
   transform-origin: center;
 }
 body.custom-layout .vw-el-value { white-space: nowrap; }
-body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center; }
+body.custom-layout #vwMessage {
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+}
+body.custom-layout .vw-message-text {
+  white-space: pre-wrap;
+  text-align: center;
+  font-size: calc(min(13vw, 18vh) * var(--msg-scale, 1));
+  width: 100%;
+  max-width: unset;
+}
 
 /* ────────────────────────────────────────────────────
    LAYOUT EDITOR (inline)
@@ -680,23 +691,33 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 .le-el:hover    { box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
 .le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
 
-/* Message resize handle */
-.le-msg-resize {
+/* Message resize handles */
+.le-msg-resize-w {
   position: absolute;
-  right: -5px;
-  top: 0;
-  bottom: 0;
+  right: -5px; top: 0; bottom: 0;
   width: 10px;
   cursor: ew-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
 }
-.le-msg-resize::after {
+.le-msg-resize-w::after {
   content: '';
-  width: 3px;
-  height: 24px;
-  background: rgba(255,152,0,0.6);
+  width: 3px; height: 24px;
+  background: rgba(255,152,0,0.7);
+  border-radius: 2px;
+}
+.le-msg-resize-h {
+  position: absolute;
+  bottom: -5px; left: 0; right: 0;
+  height: 10px;
+  cursor: ns-resize;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+}
+.le-msg-resize-h::after {
+  content: '';
+  height: 3px; width: 24px;
+  background: rgba(255,152,0,0.7);
   border-radius: 2px;
 }
 
@@ -1095,7 +1116,7 @@ const DEFAULT_ELEMENT_POSITIONS = {
   timer:      { x: 20, y: 76,  scale: 0.9  },
   stopwatch:  { x: 50, y: 76,  scale: 0.9  },
   targetTime: { x: 80, y: 76,  scale: 0.9  },
-  message:    { x: 50, y: 88,  scale: 0.85, width: 60 },
+  message:    { x: 50, y: 75,  scale: 1.0,  width: 60, height: 20 },
 };
 
 const DEFAULT_SETTINGS = {
@@ -1266,13 +1287,18 @@ function applyCustomLayout() {
   const map = { clock: 'vwClock', timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
   for (const [key, id] of Object.entries(map)) {
     const el = document.getElementById(id);
-    if (el && pos[key]) {
-      el.style.left = pos[key].x + '%';
-      el.style.top  = pos[key].y + '%';
+    if (!el || !pos[key]) continue;
+    el.style.left = pos[key].x + '%';
+    el.style.top  = pos[key].y + '%';
+    if (key === 'message') {
+      el.style.transform = 'translate(-50%, -50%)';
+      el.style.width  = (pos[key].width  ?? 60) + '%';
+      el.style.height = (pos[key].height ?? 20) + '%';
+      el.style.setProperty('--msg-scale', pos[key].scale ?? 1.0);
+    } else {
       el.style.transform = `translate(-50%, -50%) scale(${pos[key].scale})`;
-      if (key === 'message') {
-        el.style.width = (pos[key].width ?? 60) + '%';
-      }
+      el.style.width  = '';
+      el.style.height = '';
     }
   }
 }
@@ -1323,11 +1349,16 @@ function buildLeStage() {
     el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
     el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
     if (key === 'message') {
-      const handle = document.createElement('div');
-      handle.className = 'le-msg-resize';
-      handle.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e); }, { passive: false });
-      handle.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e); }, { passive: false });
-      el.appendChild(handle);
+      const hw = document.createElement('div');
+      hw.className = 'le-msg-resize-w';
+      hw.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e, 'width'); },  { passive: false });
+      hw.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e, 'width'); },  { passive: false });
+      el.appendChild(hw);
+      const hh = document.createElement('div');
+      hh.className = 'le-msg-resize-h';
+      hh.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e, 'height'); }, { passive: false });
+      hh.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e, 'height'); }, { passive: false });
+      el.appendChild(hh);
     }
   }
   stage.addEventListener('mousemove',  leDragMove);
@@ -1364,15 +1395,14 @@ function leStartDrag(e, key) {
   if (el) el.classList.add('dragging');
 }
 
-function leStartResize(e) {
+function leStartResize(e, dir) {
   e.preventDefault();
   const stage = document.getElementById('leStage');
   const sr = stage.getBoundingClientRect();
   const cp = e.touches ? e.touches[0] : e;
   const p = getElemPos('message');
-  _leDrag = { mode: 'resize', key: 'message', startX: cp.clientX, startWidth: p.width ?? 60, stageW: sr.width };
-  const el = document.getElementById('le-el-message');
-  if (el) el.classList.add('dragging');
+  _leDrag = { mode: 'resize', dir, key: 'message', startX: cp.clientX, startY: cp.clientY, startWidth: p.width ?? 60, startHeight: p.height ?? 20, stageW: sr.width, stageH: sr.height };
+  document.getElementById('le-el-message')?.classList.add('dragging');
 }
 
 function leDragMove(e) {
@@ -1380,9 +1410,13 @@ function leDragMove(e) {
   e.preventDefault();
   const cp = e.touches ? e.touches[0] : e;
   if (_leDrag.mode === 'resize') {
-    const dw = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
-    const nw = Math.max(10, Math.min(100, _leDrag.startWidth + dw));
-    setElemPos('message', { width: nw });
+    if (_leDrag.dir === 'width') {
+      const dw = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+      setElemPos('message', { width: Math.max(10, Math.min(100, _leDrag.startWidth + dw)) });
+    } else {
+      const dh = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
+      setElemPos('message', { height: Math.max(5, Math.min(100, _leDrag.startHeight + dh)) });
+    }
   } else {
     const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
     const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
@@ -1461,21 +1495,22 @@ function updateLeStage() {
     const p = getElemPos(key);
     el.style.left = p.x + '%';
     el.style.top  = p.y + '%';
-    el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
     const on = isElementOn(key);
     const { text, fs } = lePreviewContent(key);
     el.style.opacity = on ? '1' : '0.25';
     el.style.borderStyle = on ? 'dashed' : 'dotted';
     if (key === 'message') {
-      const w = p.width ?? 60;
-      el.style.width = (w / 100 * sr.width) + 'px';
-      // Re-inject content but keep the resize handle
+      el.style.transform = 'translate(-50%, -50%)';
+      el.style.width  = ((p.width  ?? 60)  / 100 * sr.width)  + 'px';
+      el.style.height = ((p.height ?? 20)  / 100 * (sr.height || sr.width * 9/16)) + 'px';
       let span = el.querySelector('span.le-msg-content');
       if (!span) { span = document.createElement('span'); span.className = 'le-msg-content'; el.insertBefore(span, el.firstChild); }
-      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;`;
+      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
       span.textContent = text;
     } else {
-      el.style.width = '';
+      el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
+      el.style.width  = '';
+      el.style.height = '';
       el.innerHTML = `<span style="color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
     }
   }
@@ -1491,7 +1526,7 @@ function updateLayoutEditorControls() {
     if (sv) sv.textContent = Math.round(p.scale * 100) + '%';
     if (pv) {
       const posText = Math.round(p.x) + ' / ' + Math.round(p.y);
-      pv.textContent = key === 'message' ? posText + '  w:' + Math.round(p.width ?? 60) + '%' : posText;
+      pv.textContent = key === 'message' ? posText + '  ' + Math.round(p.width ?? 60) + '×' + Math.round(p.height ?? 20) : posText;
     }
   }
 }
