@@ -245,6 +245,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 
 @keyframes pulse    { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
 @keyframes cue-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.07; } }
+@keyframes msgLivePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
 
 /* Connection dot */
 .conn-dot {
@@ -797,16 +798,20 @@ body.custom-layout .vw-message-text {
   <div class="op-body">
   <div class="op-grid">
 
+    <!-- On Display toggles -->
+    <div style="grid-column:1/-1;background:#1a1a1a;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">On Display</span>
+      <label class="sw-toggle"><input type="checkbox" id="showClock" onchange="setShow('clock', this.checked)" checked><span class="sw-track"></span><span class="sw-label">Clock</span></label>
+      <label class="sw-toggle"><input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)"><span class="sw-track"></span><span class="sw-label">Timer</span></label>
+      <label class="sw-toggle"><input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)"><span class="sw-track"></span><span class="sw-label">Stopwatch</span></label>
+      <label class="sw-toggle"><input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)"><span class="sw-track"></span><span class="sw-label">Target Time</span></label>
+    </div>
+
     <!-- Countdown Timer -->
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Countdown Timer</span>
         <input type="color" class="widget-color" id="timerColorPick" value="#ffd600" title="Timer colour" oninput="onWidgetColorChange('timer',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <div class="op-display timer-idle" id="opTimerDisplay">00:00</div>
@@ -856,11 +861,6 @@ body.custom-layout .vw-message-text {
       <div class="op-card-header">
         <span class="op-card-title">Target Time</span>
         <input type="color" class="widget-color" id="targetColorPick" value="#ffffff" title="Target colour" oninput="onWidgetColorChange('target',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <div class="op-display target-pending" id="opTargetDisplay">--:--</div>
@@ -888,11 +888,6 @@ body.custom-layout .vw-message-text {
       <div class="op-card-header">
         <span class="op-card-title">Stopwatch</span>
         <input type="color" class="widget-color" id="stopwatchColorPick" value="#4fc3f7" title="Stopwatch colour" oninput="onWidgetColorChange('stopwatch',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <div class="op-display sw-idle" id="opSwDisplay">00:00</div>
@@ -914,17 +909,11 @@ body.custom-layout .vw-message-text {
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Message / Cue</span>
-        <input type="color" class="widget-color" id="messageColorPick" value="#ffffff" title="Message colour" oninput="onWidgetColorChange('message',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showMessage" onchange="setShow('message', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
         <div class="btn-row">
-          <button class="btn primary" onclick="msgShow()">Show</button>
+          <button class="btn primary" id="msgShowBtn" onclick="msgShowToggle()">Show</button>
           <button class="btn amber"   onclick="msgFlash()">Flash</button>
           <button class="btn danger"  onclick="msgClear()">Clear</button>
         </div>
@@ -1012,13 +1001,6 @@ body.custom-layout .vw-message-text {
             </label>
           </div>
           <div class="ds-row">
-            <span class="ds-label">Show clock</span>
-            <label class="sw-toggle">
-              <input type="checkbox" id="showClock" onchange="setShow('clock', this.checked)" checked>
-              <span class="sw-track"></span>
-            </label>
-          </div>
-          <div class="ds-row">
             <span class="ds-label">Chromakey</span>
             <label class="sw-toggle">
               <input type="checkbox" id="settingChromakey" onchange="onSettingChange()">
@@ -1030,9 +1012,16 @@ body.custom-layout .vw-message-text {
           <div class="ds-group-title">Colours</div>
           <div class="ds-row">
             <span class="ds-label">Background</span>
-            <div class="color-group">
-              <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
-              <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div class="color-group">
+                <input type="color" id="settingBgColor" value="#0a0a0a" oninput="onColorPickerChange('Bg')">
+                <input type="text" id="settingBgColorText" class="color-text" value="#0a0a0a" onblur="onColorTextChange('Bg')" onkeydown="if(event.key==='Enter')onColorTextChange('Bg')">
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button title="Black" onclick="setColorPair('Bg','#000000');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#000000;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+                <button title="White" onclick="setColorPair('Bg','#ffffff');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#ffffff;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+                <button title="Chroma green" onclick="setColorPair('Bg','#00b140');onSettingChange()" style="width:20px;height:20px;border-radius:3px;background:#00b140;border:1px solid #444;cursor:pointer;flex-shrink:0;padding:0;"></button>
+              </div>
             </div>
           </div>
           <div class="ds-row">
@@ -1047,6 +1036,14 @@ body.custom-layout .vw-message-text {
             <div class="color-group">
               <input type="color" id="settingTextColor" value="#ffffff" oninput="onColorPickerChange('Text')">
               <input type="text" id="settingTextColorText" class="color-text" value="#ffffff" onblur="onColorTextChange('Text')" onkeydown="if(event.key==='Enter')onColorTextChange('Text')">
+            </div>
+          </div>
+          <div class="ds-row">
+            <span class="ds-label">Message</span>
+            <div class="color-group">
+              <input type="color" id="messageColorPick" value="#ffffff" oninput="onWidgetColorChange('message',this.value)">
+              <input type="text" id="messageColorText" class="color-text" value="#ffffff"
+                onblur="onMessageColorText()" onkeydown="if(event.key==='Enter')onMessageColorText()">
             </div>
           </div>
         </div>
@@ -1115,11 +1112,11 @@ document.body.classList.add(isOperator ? 'operator' : 'viewer');
 
 // ── Settings (viewer display preferences) ─────────────────────────────────
 const DEFAULT_ELEMENT_POSITIONS = {
-  clock:      { x: 50, y: 21,  scale: 1.5  },
-  timer:      { x: 16, y: 50,  scale: 0.7  },
-  stopwatch:  { x: 50, y: 50,  scale: 0.7  },
-  targetTime: { x: 84, y: 50,  scale: 0.7  },
-  message:    { x: 50, y: 80,  scale: 1.0,  width: 100, height: 40 },
+  clock:      { x: 50, y: 16,  scale: 1.25 },
+  timer:      { x: 49, y: 41,  scale: 0.6  },
+  stopwatch:  { x: 17, y: 40,  scale: 0.6  },
+  targetTime: { x: 82, y: 41,  scale: 0.6  },
+  message:    { x: 50, y: 74,  scale: 1.0,  width: 88, height: 45 },
 };
 
 const DEFAULT_SETTINGS = {
@@ -1180,7 +1177,9 @@ function onColorPickerChange(key) {
 
 function onColorTextChange(key) {
   const input = document.getElementById('setting' + key + 'ColorText');
-  const hex = cssColorToHex(input.value);
+  let val = input.value.trim();
+  if (/^[0-9a-fA-F]{3,6}$/.test(val)) { val = '#' + val; input.value = val; }
+  const hex = cssColorToHex(val);
   if (hex) { setColorPair(key, hex); onSettingChange(); }
   else input.classList.add('invalid');
 }
@@ -1220,6 +1219,7 @@ function applySettings(s) {
   const scp = el('stopwatchColorPick'); if (scp) scp.value = settings.stopwatchColor || '#4fc3f7';
   const gcp = el('targetColorPick');    if (gcp) gcp.value = settings.targetColor    || '#ffffff';
   const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
+  const mct = el('messageColorText');   if (mct) mct.value = settings.messageColor   || '#ffffff';
 
   const lh = settings.messageLineHeight ?? 1.1;
   const lhSlider = el('le-lineheight-message');
@@ -1246,6 +1246,15 @@ function readSettingsFromPanel() {
     messageLineHeight:   settings.messageLineHeight ?? 1.1,
     elementPositions:    settings.elementPositions,
   };
+}
+
+function onMessageColorText() {
+  const input = document.getElementById('messageColorText');
+  let val = input.value.trim();
+  if (/^[0-9a-fA-F]{3,6}$/.test(val)) { val = '#' + val; input.value = val; }
+  const hex = cssColorToHex(val);
+  if (hex) { document.getElementById('messageColorPick').value = hex; onWidgetColorChange('message', hex); input.classList.remove('invalid'); }
+  else input.classList.add('invalid');
 }
 
 function onWidgetColorChange(key, value) {
@@ -1323,7 +1332,7 @@ function applyCustomLayout() {
 }
 
 function fitMessageToBox(scale) {
-  requestAnimationFrame(() => {
+  document.fonts.ready.then(() => requestAnimationFrame(() => {
     const box = document.getElementById('vwMessage');
     const txt = box?.querySelector('.vw-message-text');
     if (!box || !txt) return;
@@ -1359,7 +1368,7 @@ function fitMessageToBox(scale) {
     }
     document.body.removeChild(probe);
     txt.style.fontSize = Math.max(8, Math.floor(best * s)) + 'px';
-  });
+  }));
 }
 
 function fitMessageScale() {
@@ -1585,12 +1594,26 @@ function updateLeStage() {
     el.style.borderStyle = on ? 'dashed' : 'dotted';
     if (key === 'message') {
       el.style.transform = 'translate(-50%, -50%)';
-      el.style.width  = ((p.width  ?? 60)  / 100 * sr.width)  + 'px';
-      el.style.height = ((p.height ?? 20)  / 100 * (sr.height || sr.width * 9/16)) + 'px';
+      const elW = (p.width  ?? 60)  / 100 * sr.width;
+      const elH = (p.height ?? 20)  / 100 * (sr.height || sr.width * 9/16);
+      el.style.width  = elW + 'px';
+      el.style.height = elH + 'px';
       let span = el.querySelector('span.le-msg-content');
       if (!span) { span = document.createElement('span'); span.className = 'le-msg-content'; el.insertBefore(span, el.firstChild); }
-      span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.round(fs * p.scale)}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;word-break:break-word;pointer-events:none;line-height:1.3;`;
-      span.textContent = text;
+      const lh = settings.messageLineHeight ?? 1.1;
+      // Binary search for best font size, same as viewer
+      document.fonts.ready.then(() => {
+        const probe = document.createElement('div');
+        probe.style.cssText = `position:fixed;top:-9999px;left:0;visibility:hidden;width:${elW}px;white-space:pre-wrap;overflow-wrap:break-word;word-wrap:break-word;font-family:'Roboto Mono',monospace;font-weight:700;line-height:${lh};padding:0;margin:0;box-sizing:border-box;`;
+        probe.textContent = text || ' ';
+        document.body.appendChild(probe);
+        let lo = 8, hi = 300, best = lo;
+        while (lo <= hi) { const mid = Math.floor((lo + hi) / 2); probe.style.fontSize = mid + 'px'; if (probe.offsetHeight <= elH) { best = mid; lo = mid + 1; } else { hi = mid - 1; } }
+        document.body.removeChild(probe);
+        span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.max(8, Math.floor(best * (p.scale ?? 1)))}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;overflow-wrap:break-word;word-break:break-word;pointer-events:none;line-height:${lh};`;
+        span.textContent = text;
+      });
+      if (!span.textContent) span.textContent = text;
     } else {
       el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
       el.style.width  = '';
@@ -1966,9 +1989,10 @@ function applySSEState(state) {
     const txtEl  = document.getElementById('vwMsgText');
     const msgEl  = document.getElementById('vwMessage');
     if (txtEl) { txtEl.textContent = state.message.text; fitMessageToBox(); }
-    setEl('msgText', state.message.text);
+    if (state.message.text) setEl('msgText', state.message.text);
     setChk('showMessage', state.message.visible);
 
+    updateMsgShowBtn();
     if (state.message.flash && msgEl) {
       msgEl.classList.remove('flashing');
       void msgEl.offsetWidth;
@@ -1989,6 +2013,7 @@ function applySSEState(state) {
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
+    updateMsgShowBtn();
   }
   if (state.displaySettings) {
     // Viewer: apply unless pinned to a URL preset
@@ -2105,27 +2130,39 @@ function updateTargetTime() {
 }
 
 // ── Message commands ───────────────────────────────────────────────────────
+function msgShowToggle() {
+  if (sseShow.message && sseMessage && sseMessage.visible) { msgClear(); } else { msgShow(); }
+}
 function msgShow() {
   const text = document.getElementById('msgText').value;
-  post('message', { text, visible: true });
-  post('show', { message: true });
+  post('message', { text, visible: true }).then(() => post('show', { message: true }));
 }
 function msgFlash() {
   const text = document.getElementById('msgText').value;
-  post('message', { text, flash: true });
-  post('show', { message: true });
+  post('message', { text, flash: true }).then(() => post('show', { message: true }));
 }
 function msgClear() {
   post('message', { visible: false, flash: false });
+  post('show', { message: false });
+}
+function updateMsgShowBtn() {
+  const btn = document.getElementById('msgShowBtn');
+  if (!btn) return;
+  const live = sseShow.message && sseMessage && sseMessage.visible;
+  if (live) {
+    btn.textContent = '⬛ LIVE — Click to Hide';
+    btn.className = 'btn';
+    btn.style.cssText = 'background:#ff1744;color:#fff;font-weight:700;letter-spacing:0.05em;flex:2;animation:msgLivePulse 1.4s ease-in-out infinite;';
+  } else {
+    btn.textContent = 'Show';
+    btn.className = 'btn primary';
+    btn.style.cssText = '';
+  }
 }
 
 // ── Widget visibility ──────────────────────────────────────────────────────
 function setShow(widget, visible) {
   post('show', { [widget]: visible });
-  if (widget === 'message') {
-    // Also sync message.visible
-    if (!visible) post('message', { visible: false });
-  }
 }
 
 // ── Fullscreen ─────────────────────────────────────────────────────────────

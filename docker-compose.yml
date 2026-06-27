@@ -5,4 +5,4 @@ services:
     container_name: studio-clock
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "7823:3000"
