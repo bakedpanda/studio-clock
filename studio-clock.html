@@ -203,6 +203,8 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   line-height: 1.25;
   word-break: break-word;
   white-space: pre-wrap;
+  width: 100%;
+  max-width: 96vw;
 }
 
 /* Timer color states */
@@ -1026,7 +1028,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
         <span class="section-chevron" id="layoutEditorChevron">▾</span>
       </div>
     </div>
-    <div class="op-section-body" id="layoutEditorBody" style="display:none">
+    <div class="op-section-body" id="layoutEditorBody" style="display:block">
       <div class="le-stage-wrap">
         <div id="leStage"></div>
       </div>
@@ -2037,6 +2039,16 @@ document.addEventListener('fullscreenchange', () => {
   const icon = document.getElementById('fsIcon');
   if (icon) icon.innerHTML = document.fullscreenElement ? IC_SHR : IC_EXP;
 });
+
+// Open layout editor by default on operator page
+if (isOperator) {
+  const chev = document.getElementById('layoutEditorChevron');
+  if (chev) chev.style.transform = 'rotate(180deg)';
+  buildLeStage();
+  _leStageBuilt = true;
+  updateLayoutEditorControls();
+  _leRefreshInterval = setInterval(updateLeStage, 500);
+}
 </script>
 </body>
 </html>
