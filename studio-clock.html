@@ -634,6 +634,7 @@ body.focus-stopwatch #vwStopwatch .vw-el-value {
 
 /* ────────────────────────────────────────────────────
    CUSTOM LAYOUT — viewer absolute positioning
+   All other visibility/focus rules are overridden
 ──────────────────────────────────────────────────── */
 body.custom-layout .vw-page {
   position: relative;
@@ -641,6 +642,7 @@ body.custom-layout .vw-page {
   padding: 0;
 }
 body.custom-layout .vw-el {
+  display: flex !important;
   position: absolute;
   width: auto;
   transform-origin: center;
@@ -679,6 +681,7 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 #leStage {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 .le-el {
@@ -1254,8 +1257,15 @@ function applyCustomLayout() {
   if (!use) {
     for (const id of ids) {
       const el = document.getElementById(id);
-      if (el) { el.style.left = ''; el.style.top = ''; el.style.transform = ''; }
+      if (el) { el.style.left = ''; el.style.top = ''; el.style.transform = ''; el.style.display = ''; }
     }
+    // Re-apply visibility from last known state
+    showWidget('vwClock',     sseShow.clock !== false);
+    showWidget('vwTimer',     sseShow.timer);
+    showWidget('vwStopwatch', sseShow.stopwatch);
+    showWidget('vwTarget',    sseShow.targetTime);
+    showWidget('vwMessage',   sseShow.message && sseMessage && sseMessage.visible);
+    applyViewerFocus();
     return;
   }
   const pos = settings.elementPositions;
@@ -1395,14 +1405,19 @@ function resetLayout() {
 
 function lePreviewContent(key) {
   const stageEl = document.getElementById('leStage');
-  const stageH = stageEl ? stageEl.getBoundingClientRect().height : 200;
+  const r = stageEl ? stageEl.getBoundingClientRect() : { width: 320, height: 180 };
+  const stageH = r.height, stageW = r.width;
+  // Mirror viewer font-size rules: viewer uses min(Xvw, Yvh) = min(X * stageW/100, Y * stageH/100)
+  const clockFs  = Math.min(stageW * 0.15, stageH * 0.23);
+  const timerFs  = Math.min(stageW * 0.16, stageH * 0.24);
+  const msgFs    = Math.min(stageW * 0.13, stageH * 0.18);
   switch (key) {
-    case 'clock':      return { text: document.getElementById('timeDisplay')?.textContent || '00:00:00', fs: stageH * 0.22 };
-    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: stageH * 0.22 };
-    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: stageH * 0.22 };
-    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: stageH * 0.22 };
-    case 'message':    return { text: document.getElementById('vwMsgText')?.textContent    || 'Message',  fs: stageH * 0.16 };
-    default:           return { text: key, fs: stageH * 0.20 };
+    case 'clock':      return { text: document.getElementById('timeDisplay')?.textContent || '00:00:00', fs: clockFs };
+    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: timerFs };
+    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
+    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
+    case 'message':    return { text: document.getElementById('vwMsgText')?.textContent    || 'Message',  fs: msgFs  };
+    default:           return { text: key, fs: timerFs };
   }
 }
 
@@ -1808,6 +1823,7 @@ function applySSEState(state) {
   }
   if (state.show) {
     sseShow = state.show;
+    showWidget('vwClock',     state.show.clock !== false);
     showWidget('vwTimer',     state.show.timer);
     showWidget('vwStopwatch', state.show.stopwatch);
     showWidget('vwTarget',    state.show.targetTime);
@@ -1825,6 +1841,7 @@ function applySSEState(state) {
 }
 
 function showWidget(id, on) {
+  if (settings.customLayout) return; // custom layout: CSS handles display, position controls visibility
   const el = document.getElementById(id);
   if (el) el.style.display = on ? 'flex' : 'none';
 }
