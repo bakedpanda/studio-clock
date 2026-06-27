@@ -611,37 +611,6 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   margin-top: 4px;
 }
 
-/* Lock button */
-.lock-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: #181818;
-  border: 1px solid #242424;
-  border-radius: 4px;
-  color: #555;
-  cursor: pointer;
-  padding: 4px 10px;
-  font-family: inherit;
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.lock-btn:hover { background: #222; border-color: #444; color: #fff; }
-.lock-btn.unlocked { background: #1a2a1a; border-color: #2a4a2a; color: #00e676; }
-
-/* Locked state: dim and disable controls */
-.settings-locked .op-section-body {
-  position: relative;
-}
-.settings-locked .op-section-body::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  cursor: not-allowed;
-}
 
 /* ────────────────────────────────────────────────────
    CUSTOM LAYOUT — viewer absolute positioning
@@ -934,22 +903,61 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
 
   </div><!-- end op-grid -->
 
+  <!-- ── Layout Editor ── -->
+  <div class="op-section" id="layoutEditorSection">
+    <div class="op-section-header" onclick="toggleLayoutEditor()">
+      <span class="op-section-title">Layout Editor</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="btn-sm" onclick="event.stopPropagation();resetLayout()">Reset</button>
+        <span class="section-chevron" id="layoutEditorChevron">▾</span>
+      </div>
+    </div>
+    <div class="op-section-body" id="layoutEditorBody" style="display:block">
+      <div class="le-stage-wrap">
+        <div id="leStage"></div>
+      </div>
+      <div class="le-sliders">
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#00e676">Clock</span>
+          <input type="range" class="le-scale-range" id="le-scale-clock" min="0.2" max="2.5" step="0.05" value="1" oninput="onScaleChange('clock',this.value)">
+          <span class="le-scale-val" id="le-scaleval-clock">100%</span>
+          <span class="le-pos-val" id="le-pos-clock">50/44</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ffd600">Timer</span>
+          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
+          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
+          <span class="le-pos-val" id="le-pos-timer">20/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#4fc3f7">Stopwatch</span>
+          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
+          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
+          <span class="le-pos-val" id="le-pos-stopwatch">50/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ce93d8">Target</span>
+          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
+          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
+          <span class="le-pos-val" id="le-pos-targetTime">80/76</span>
+        </div>
+        <div class="le-slider-row">
+          <span class="le-slider-name" style="color:#ff9800">Message</span>
+          <input type="range" class="le-scale-range" id="le-scale-message" min="0.2" max="2.5" step="0.05" value="0.85" oninput="onScaleChange('message',this.value)">
+          <span class="le-scale-val" id="le-scaleval-message">85%</span>
+          <span class="le-pos-val" id="le-pos-message">50/88</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Display Settings ── -->
   <div class="op-section" id="displaySettingsSection">
     <div class="op-section-header" onclick="toggleDisplaySettings()">
       <span class="op-section-title">Display Settings</span>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <button class="lock-btn" id="settingsLockBtn" onclick="event.stopPropagation();toggleSettingsLock()" title="Toggle lock">
-          <svg id="lockIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <span id="lockLabel">Locked</span>
-        </button>
-        <span class="section-chevron" id="displaySettingsChevron">▾</span>
-      </div>
+      <span class="section-chevron" id="displaySettingsChevron" style="transform:rotate(180deg)">▾</span>
     </div>
-    <div class="op-section-body" id="displaySettingsBody" style="display:none">
+    <div class="op-section-body" id="displaySettingsBody" style="display:block">
       <div class="ds-grid">
         <div class="ds-group">
           <div class="ds-group-title">Appearance</div>
@@ -1011,54 +1019,6 @@ body.custom-layout .vw-message-text { white-space: pre-wrap; text-align: center;
       </div>
       <div class="ds-footer">
         <button class="btn danger" onclick="resetSettingsToDefaults()">Reset to Defaults</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Layout Editor ── -->
-  <div class="op-section" id="layoutEditorSection">
-    <div class="op-section-header" onclick="toggleLayoutEditor()">
-      <span class="op-section-title">Layout Editor</span>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn-sm" onclick="event.stopPropagation();resetLayout()">Reset</button>
-        <span class="section-chevron" id="layoutEditorChevron">▾</span>
-      </div>
-    </div>
-    <div class="op-section-body" id="layoutEditorBody" style="display:block">
-      <div class="le-stage-wrap">
-        <div id="leStage"></div>
-      </div>
-      <div class="le-sliders">
-        <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#00e676">Clock</span>
-          <input type="range" class="le-scale-range" id="le-scale-clock" min="0.2" max="2.5" step="0.05" value="1" oninput="onScaleChange('clock',this.value)">
-          <span class="le-scale-val" id="le-scaleval-clock">100%</span>
-          <span class="le-pos-val" id="le-pos-clock">50/44</span>
-        </div>
-        <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#ffd600">Timer</span>
-          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
-          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
-          <span class="le-pos-val" id="le-pos-timer">20/76</span>
-        </div>
-        <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#4fc3f7">Stopwatch</span>
-          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
-          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
-          <span class="le-pos-val" id="le-pos-stopwatch">50/76</span>
-        </div>
-        <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#ce93d8">Target</span>
-          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
-          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
-          <span class="le-pos-val" id="le-pos-targetTime">80/76</span>
-        </div>
-        <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#ff9800">Message</span>
-          <input type="range" class="le-scale-range" id="le-scale-message" min="0.2" max="2.5" step="0.05" value="0.85" oninput="onScaleChange('message',this.value)">
-          <span class="le-scale-val" id="le-scaleval-message">85%</span>
-          <span class="le-pos-val" id="le-pos-message">50/88</span>
-        </div>
       </div>
     </div>
   </div>
@@ -1476,8 +1436,6 @@ function updateLayoutEditorControls() {
 }
 
 // ── Display settings section ───────────────────────────────────────────────
-let _settingsLocked = true;
-
 function toggleDisplaySettings() {
   const body = document.getElementById('displaySettingsBody');
   const chev = document.getElementById('displaySettingsChevron');
@@ -1485,26 +1443,7 @@ function toggleDisplaySettings() {
   const open = body.style.display !== 'none';
   body.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
-  if (!open) { renderPresetsList(); applyLockState(); }
-}
-
-function toggleSettingsLock() {
-  _settingsLocked = !_settingsLocked;
-  const btn = document.getElementById('settingsLockBtn');
-  const lbl = document.getElementById('lockLabel');
-  const body = document.getElementById('displaySettingsBody');
-  if (btn)  btn.classList.toggle('unlocked', !_settingsLocked);
-  if (lbl)  lbl.textContent = _settingsLocked ? 'Locked' : 'Unlocked';
-  if (body) body.style.pointerEvents = _settingsLocked ? 'none' : '';
-  if (body) body.style.opacity       = _settingsLocked ? '0.45' : '';
-}
-
-// Apply lock state on section open (body may have just been made visible)
-function applyLockState() {
-  const body = document.getElementById('displaySettingsBody');
-  if (!body || body.style.display === 'none') return;
-  body.style.pointerEvents = _settingsLocked ? 'none' : '';
-  body.style.opacity       = _settingsLocked ? '0.45' : '';
+  if (!open) renderPresetsList();
 }
 
 // ── Presets ────────────────────────────────────────────────────────────────
@@ -2022,7 +1961,7 @@ document.addEventListener('fullscreenchange', () => {
   if (icon) icon.innerHTML = document.fullscreenElement ? IC_SHR : IC_EXP;
 });
 
-// Open layout editor by default on operator page
+// Init operator-only sections on page load
 if (isOperator) {
   const chev = document.getElementById('layoutEditorChevron');
   if (chev) chev.style.transform = 'rotate(180deg)';
@@ -2030,6 +1969,7 @@ if (isOperator) {
   _leStageBuilt = true;
   updateLayoutEditorControls();
   _leRefreshInterval = setInterval(updateLeStage, 500);
+  renderPresetsList();
 }
 </script>
 </body>
