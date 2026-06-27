@@ -695,35 +695,23 @@ body.custom-layout .vw-message-text {
 .le-el:hover    { box-shadow: 0 0 0 1px rgba(255,255,255,0.12); }
 .le-el.dragging { cursor: grabbing; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
 
-/* Message resize handles */
-.le-msg-resize-w {
+/* Message resize handles — one per edge */
+.le-msg-resize {
   position: absolute;
-  right: -5px; top: 0; bottom: 0;
-  width: 10px;
-  cursor: ew-resize;
   display: flex; align-items: center; justify-content: center;
   z-index: 2;
 }
-.le-msg-resize-w::after {
+.le-msg-resize::after {
   content: '';
-  width: 3px; height: 24px;
   background: rgba(255,152,0,0.7);
   border-radius: 2px;
 }
-.le-msg-resize-h {
-  position: absolute;
-  bottom: -5px; left: 0; right: 0;
-  height: 10px;
-  cursor: ns-resize;
-  display: flex; align-items: center; justify-content: center;
-  z-index: 2;
-}
-.le-msg-resize-h::after {
-  content: '';
-  height: 3px; width: 24px;
-  background: rgba(255,152,0,0.7);
-  border-radius: 2px;
-}
+.le-msg-resize-l { left: -5px;   top: 0; bottom: 0; width: 10px; cursor: ew-resize; }
+.le-msg-resize-r { right: -5px;  top: 0; bottom: 0; width: 10px; cursor: ew-resize; }
+.le-msg-resize-t { top: -5px;    left: 0; right: 0; height: 10px; cursor: ns-resize; }
+.le-msg-resize-b { bottom: -5px; left: 0; right: 0; height: 10px; cursor: ns-resize; }
+.le-msg-resize-l::after, .le-msg-resize-r::after { width: 3px; height: 24px; }
+.le-msg-resize-t::after, .le-msg-resize-b::after { height: 3px; width: 24px; }
 
 /* Scale sliders below stage */
 .le-sliders {
@@ -1357,16 +1345,13 @@ function buildLeStage() {
     el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
     el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
     if (key === 'message') {
-      const hw = document.createElement('div');
-      hw.className = 'le-msg-resize-w';
-      hw.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e, 'width'); },  { passive: false });
-      hw.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e, 'width'); },  { passive: false });
-      el.appendChild(hw);
-      const hh = document.createElement('div');
-      hh.className = 'le-msg-resize-h';
-      hh.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e, 'height'); }, { passive: false });
-      hh.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e, 'height'); }, { passive: false });
-      el.appendChild(hh);
+      for (const [cls, dir] of [['le-msg-resize-l','left'],['le-msg-resize-r','right'],['le-msg-resize-t','top'],['le-msg-resize-b','bottom']]) {
+        const h = document.createElement('div');
+        h.className = 'le-msg-resize ' + cls;
+        h.addEventListener('mousedown',  e => { e.stopPropagation(); leStartResize(e, dir); }, { passive: false });
+        h.addEventListener('touchstart', e => { e.stopPropagation(); leStartResize(e, dir); }, { passive: false });
+        el.appendChild(h);
+      }
     }
   }
   stage.addEventListener('mousemove',  leDragMove);
@@ -1418,12 +1403,15 @@ function leDragMove(e) {
   e.preventDefault();
   const cp = e.touches ? e.touches[0] : e;
   if (_leDrag.mode === 'resize') {
-    if (_leDrag.dir === 'width') {
-      const dw = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
-      setElemPos('message', { width: Math.max(10, Math.min(100, _leDrag.startWidth + dw)) });
-    } else {
-      const dh = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
-      setElemPos('message', { height: Math.max(5, Math.min(100, _leDrag.startHeight + dh)) });
+    const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
+    const dy = ((cp.clientY - _leDrag.startY) / _leDrag.stageH) * 100;
+    const clampW = v => Math.max(10, Math.min(100, v));
+    const clampH = v => Math.max(5,  Math.min(100, v));
+    switch (_leDrag.dir) {
+      case 'right':  setElemPos('message', { width:  clampW(_leDrag.startWidth  + dx) }); break;
+      case 'left':   setElemPos('message', { width:  clampW(_leDrag.startWidth  - dx) }); break;
+      case 'bottom': setElemPos('message', { height: clampH(_leDrag.startHeight + dy) }); break;
+      case 'top':    setElemPos('message', { height: clampH(_leDrag.startHeight - dy) }); break;
     }
   } else {
     const dx = ((cp.clientX - _leDrag.startX) / _leDrag.stageW) * 100;
