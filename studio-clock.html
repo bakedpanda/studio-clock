@@ -211,7 +211,7 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   font-weight: 700;
   color: var(--message-color);
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.1;
   word-break: break-word;
   white-space: pre-wrap;
   width: 100%;
@@ -1304,14 +1304,26 @@ function fitMessageToBox(scale) {
     const txt = box?.querySelector('.vw-message-text');
     if (!box || !txt || !box.clientHeight || !box.clientWidth) return;
     const s = (scale != null) ? Math.max(0.1, Math.min(1.0, scale)) : (getElemPos('message').scale ?? 1.0);
+    const maxW = box.clientWidth;
+    const maxH = box.clientHeight;
+
+    // Measure in an off-screen probe to avoid flex/overflow interference
+    const probe = document.createElement('div');
+    probe.style.cssText = `position:fixed;top:-9999px;left:0;visibility:hidden;` +
+      `width:${maxW}px;white-space:pre-wrap;overflow-wrap:break-word;word-wrap:break-word;` +
+      `font-family:'Roboto Mono',monospace;font-weight:700;line-height:1.1;` +
+      `padding:0;margin:0;box-sizing:border-box;`;
+    probe.textContent = txt.textContent || ' ';
+    document.body.appendChild(probe);
+
     let lo = 8, hi = 400, best = lo;
     while (lo <= hi) {
       const mid = Math.floor((lo + hi) / 2);
-      txt.style.fontSize = mid + 'px';
-      const fits = txt.scrollWidth <= box.clientWidth && txt.scrollHeight <= box.clientHeight;
-      if (fits) { best = mid; lo = mid + 1; }
-      else       { hi = mid - 1; }
+      probe.style.fontSize = mid + 'px';
+      if (probe.offsetHeight <= maxH) { best = mid; lo = mid + 1; }
+      else                            { hi = mid - 1; }
     }
+    document.body.removeChild(probe);
     txt.style.fontSize = Math.max(8, Math.floor(best * s)) + 'px';
   });
 }
