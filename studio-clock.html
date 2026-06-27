@@ -797,16 +797,22 @@ body.custom-layout .vw-message-text {
   <div class="op-body">
   <div class="op-grid">
 
+    <!-- On Display toggles -->
+    <div class="op-card op-card-display-toggles">
+      <div class="op-card-header"><span class="op-card-title">On Display</span></div>
+      <div class="op-card-body" style="display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 12px;">
+        <label class="sw-toggle"><input type="checkbox" id="showClock" onchange="setShow('clock', this.checked)" checked><span class="sw-track"></span><span class="sw-label">Clock</span></label>
+        <label class="sw-toggle"><input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)"><span class="sw-track"></span><span class="sw-label">Timer</span></label>
+        <label class="sw-toggle"><input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)"><span class="sw-track"></span><span class="sw-label">Stopwatch</span></label>
+        <label class="sw-toggle"><input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)"><span class="sw-track"></span><span class="sw-label">Target Time</span></label>
+      </div>
+    </div>
+
     <!-- Countdown Timer -->
     <div class="op-card">
       <div class="op-card-header">
         <span class="op-card-title">Countdown Timer</span>
         <input type="color" class="widget-color" id="timerColorPick" value="#ffd600" title="Timer colour" oninput="onWidgetColorChange('timer',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <div class="op-display timer-idle" id="opTimerDisplay">00:00</div>
@@ -856,11 +862,6 @@ body.custom-layout .vw-message-text {
       <div class="op-card-header">
         <span class="op-card-title">Target Time</span>
         <input type="color" class="widget-color" id="targetColorPick" value="#ffffff" title="Target colour" oninput="onWidgetColorChange('target',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <div class="op-display target-pending" id="opTargetDisplay">--:--</div>
@@ -888,11 +889,6 @@ body.custom-layout .vw-message-text {
       <div class="op-card-header">
         <span class="op-card-title">Stopwatch</span>
         <input type="color" class="widget-color" id="stopwatchColorPick" value="#4fc3f7" title="Stopwatch colour" oninput="onWidgetColorChange('stopwatch',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <div class="op-display sw-idle" id="opSwDisplay">00:00</div>
@@ -915,11 +911,6 @@ body.custom-layout .vw-message-text {
       <div class="op-card-header">
         <span class="op-card-title">Message / Cue</span>
         <input type="color" class="widget-color" id="messageColorPick" value="#ffffff" title="Message colour" oninput="onWidgetColorChange('message',this.value)">
-        <label class="sw-toggle">
-          <input type="checkbox" id="showMessage" onchange="setShow('message', this.checked)">
-          <span class="sw-track"></span>
-          <span class="sw-label">On Display</span>
-        </label>
       </div>
       <div class="op-card-body">
         <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
@@ -1008,13 +999,6 @@ body.custom-layout .vw-message-text {
             <span class="ds-label">Seconds ring</span>
             <label class="sw-toggle">
               <input type="checkbox" id="settingShowSeconds" onchange="onSettingChange()" checked>
-              <span class="sw-track"></span>
-            </label>
-          </div>
-          <div class="ds-row">
-            <span class="ds-label">Show clock</span>
-            <label class="sw-toggle">
-              <input type="checkbox" id="showClock" onchange="setShow('clock', this.checked)" checked>
               <span class="sw-track"></span>
             </label>
           </div>
