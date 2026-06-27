@@ -1221,7 +1221,6 @@ function applySettings(s) {
   const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
 
   updateNavLinks();
-  applyViewerFocus();
 }
 
 function readSettingsFromPanel() {
@@ -1884,7 +1883,6 @@ function applySSEState(state) {
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
-    applyViewerFocus();
   }
   if (state.displaySettings) {
     // Viewer: apply unless pinned to a URL preset
