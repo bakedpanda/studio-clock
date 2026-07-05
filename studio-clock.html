@@ -464,6 +464,37 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
 
 .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
+/* Message live banner */
+.msg-live-banner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: #3d0000;
+  border: 1px solid #691a1a;
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: #ff1744;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.msg-live-banner.visible { display: flex; }
+.msg-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff1744;
+  flex-shrink: 0;
+  animation: msgLivePulse 1.4s ease-in-out infinite;
+}
+.msg-live-time {
+  margin-left: auto;
+  color: #ff8a80;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
 /* Textarea */
 .op-textarea {
   background: #181818;
@@ -913,9 +944,15 @@ body.custom-layout .vw-message-text {
       <div class="op-card-body">
         <textarea class="op-textarea" id="msgText" placeholder="Type a message or cue…" maxlength="200" oninput="_msgDraft=this.value;updateLeStage()"></textarea>
         <div class="btn-row">
-          <button class="btn primary" id="msgShowBtn" onclick="msgShowToggle()">Show</button>
+          <button class="btn primary" onclick="msgShow()">Show</button>
           <button class="btn amber"   onclick="msgFlash()">Flash</button>
+          <button class="btn"         onclick="msgHide()">Hide</button>
           <button class="btn danger"  onclick="msgClear()">Clear</button>
+        </div>
+        <div class="msg-live-banner" id="msgLiveBanner">
+          <span class="msg-live-dot"></span>
+          <span>LIVE</span>
+          <span class="msg-live-time" id="msgLiveTime">00:00</span>
         </div>
       </div>
     </div>
@@ -1839,7 +1876,7 @@ drawClock();
 let sseTimer      = { mode: 'idle', remaining: 0, label: '', warnAt: 60000 };
 let sseStopwatch  = { mode: 'idle', elapsed: 0, label: '' };
 let sseTargetTime = { target: '', label: '', enabled: false };
-let sseMessage    = { text: '', visible: false, flash: false };
+let sseMessage    = { text: '', visible: false, flash: false, shownAt: null };
 let sseShow       = { clock: true, timer: false, stopwatch: false, targetTime: false, message: false };
 let _msgDraft     = '';  // operator draft text — not cleared by SSE
 
@@ -1946,6 +1983,11 @@ function renderWidgets() {
       opTG.textContent = '--:--'; opTG.className = 'op-display target-pending';
     }
   }
+
+  const msgTimeEl = document.getElementById('msgLiveTime');
+  if (msgTimeEl && sseMessage && sseMessage.visible && sseMessage.shownAt) {
+    msgTimeEl.textContent = fmtMsFloor(serverNow().getTime() - sseMessage.shownAt);
+  }
 }
 setInterval(renderWidgets, 100);
 
@@ -1992,7 +2034,7 @@ function applySSEState(state) {
     if (state.message.text) setEl('msgText', state.message.text);
     setChk('showMessage', state.message.visible);
 
-    updateMsgShowBtn();
+    updateMsgLiveBanner();
     if (state.message.flash && msgEl) {
       msgEl.classList.remove('flashing');
       void msgEl.offsetWidth;
@@ -2013,7 +2055,7 @@ function applySSEState(state) {
     setChk('showTimer',      state.show.timer);
     setChk('showStopwatch',  state.show.stopwatch);
     setChk('showTargetTime', state.show.targetTime);
-    updateMsgShowBtn();
+    updateMsgLiveBanner();
   }
   if (state.displaySettings) {
     // Viewer: apply unless pinned to a URL preset
@@ -2130,9 +2172,6 @@ function updateTargetTime() {
 }
 
 // ── Message commands ───────────────────────────────────────────────────────
-function msgShowToggle() {
-  if (sseShow.message && sseMessage && sseMessage.visible) { msgClear(); } else { msgShow(); }
-}
 function msgShow() {
   const text = document.getElementById('msgText').value;
   post('message', { text, visible: true }).then(() => post('show', { message: true }));
@@ -2141,23 +2180,23 @@ function msgFlash() {
   const text = document.getElementById('msgText').value;
   post('message', { text, flash: true }).then(() => post('show', { message: true }));
 }
-function msgClear() {
+function msgHide() {
   post('message', { visible: false, flash: false });
   post('show', { message: false });
 }
-function updateMsgShowBtn() {
-  const btn = document.getElementById('msgShowBtn');
-  if (!btn) return;
+function msgClear() {
+  _msgDraft = '';
+  const msgTextEl = document.getElementById('msgText');
+  if (msgTextEl) msgTextEl.value = '';
+  post('message', { text: '', visible: false, flash: false });
+  post('show', { message: false });
+  updateLeStage();
+}
+function updateMsgLiveBanner() {
+  const banner = document.getElementById('msgLiveBanner');
+  if (!banner) return;
   const live = sseShow.message && sseMessage && sseMessage.visible;
-  if (live) {
-    btn.textContent = '⬛ LIVE — Click to Hide';
-    btn.className = 'btn';
-    btn.style.cssText = 'background:#ff1744;color:#fff;font-weight:700;letter-spacing:0.05em;flex:2;animation:msgLivePulse 1.4s ease-in-out infinite;';
-  } else {
-    btn.textContent = 'Show';
-    btn.className = 'btn primary';
-    btn.style.cssText = '';
-  }
+  banner.classList.toggle('visible', !!live);
 }
 
 // ── Widget visibility ──────────────────────────────────────────────────────

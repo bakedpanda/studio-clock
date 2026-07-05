@@ -86,6 +86,7 @@ const message = {
   text: '',
   visible: false,
   flash: false,
+  shownAt: null,
 };
 
 // Which widgets are shown on display pages (operator controls)
@@ -159,7 +160,7 @@ function snapshot() {
       label: stopwatch.label,
     },
     targetTime: { target: targetTime.target, label: targetTime.label, enabled: targetTime.enabled },
-    message:    { text: message.text, visible: message.visible, flash: message.flash },
+    message:    { text: message.text, visible: message.visible, flash: message.flash, shownAt: message.shownAt },
     show:       { clock: show.clock, timer: show.timer, stopwatch: show.stopwatch,
                   targetTime: show.targetTime, message: show.message },
     displaySettings: { ...displaySettings },
@@ -432,6 +433,7 @@ const server = http.createServer((req, res) => {
   // Message / cue
   if (req.method === 'POST' && pathname === '/message') {
     return parseBody(req, body => {
+      const wasVisible = message.visible;
       if (body.text    !== undefined) message.text    = String(body.text).slice(0, 200);
       if (body.visible !== undefined) message.visible = !!body.visible;
       if (body.flash   !== undefined) {
@@ -445,6 +447,8 @@ const server = http.createServer((req, res) => {
           }, 3000);
         }
       }
+      if (message.visible && !wasVisible) message.shownAt = ntpNow();
+      if (!message.visible) message.shownAt = null;
       saveState();
       broadcast(snapshot());
       noContent(res);
