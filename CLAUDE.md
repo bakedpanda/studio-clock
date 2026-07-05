@@ -16,6 +16,7 @@ There is no package.json, no npm install, no test suite, no linter, and no build
 - Run via Docker: `docker compose up -d` (maps host port 7823 → container 7823, see `docker-compose.yml`)
 - Rebuild/redeploy on a host already running it: `./update.sh` (forces `docker-compose up -d --build --force-recreate`)
 - First-time deploy: `./deploy.sh`
+- Windows laptop, no Docker: `start.bat` / `stop.bat` (starts/stops plain Node in the background, opens the operator page)
 
 Manual verification after changes (no automated tests exist): start the server, open `http://localhost:7823/operator` in one tab and `http://localhost:7823/` in another, and confirm timer/stopwatch/message/settings changes on the operator propagate to the viewer live.
 
