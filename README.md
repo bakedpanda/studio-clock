@@ -24,12 +24,21 @@ docker compose up -d
 node server.js
 ```
 
-The server runs on port `3000` by default. Set the `PORT` environment variable to override.
+The server runs on port `7823` by default (an uncommon port chosen to avoid conflicts). Set the `PORT` environment variable to override.
 
 | URL | Purpose |
 |-----|---------|
-| `http://host:3000/` | Viewer — display only |
-| `http://host:3000/operator` | Operator — timer controls |
+| `http://host:7823/` | Viewer — display only |
+| `http://host:7823/operator` | Operator — timer controls |
+
+### Windows laptop (event use)
+
+For running on a Windows laptop without Docker: install [Node.js](https://nodejs.org) (LTS), then double-click:
+
+- `start.bat` — starts the server in the background and opens the operator page in your browser
+- `stop.bat` — stops the server
+
+Windows Firewall may prompt to allow Node.js on first run — allow it if other devices (viewer screens) need to connect over the network. Display settings and saved presets live in `presets.json`/`state.json` next to `server.js`, so they persist across `start.bat`/`stop.bat` as long as you don't delete the folder.
 
 ## How it works
 
