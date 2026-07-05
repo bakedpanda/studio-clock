@@ -2,7 +2,7 @@ const http  = require('http');
 const dgram = require('dgram');
 const fs    = require('fs');
 const path  = require('path');
-const PORT  = process.env.PORT || 3000;
+const PORT  = process.env.PORT || 7823;
 
 // ── NTP Sync ───────────────────────────────────────────────────────────────
 const NTP_SERVERS      = ['0.pool.ntp.org', '1.pool.ntp.org', '2.pool.ntp.org'];

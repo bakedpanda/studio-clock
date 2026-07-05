@@ -8,4 +8,4 @@ echo "Building and starting studio-clock..."
 docker-compose up -d --build
 
 echo ""
-echo "Done. Running at http://$(hostname -I | awk '{print $1}'):3000"
+echo "Done. Running at http://$(hostname -I | awk '{print $1}'):7823"

@@ -2,5 +2,5 @@ FROM node:22-alpine
 WORKDIR /app
 COPY server.js .
 COPY studio-clock.html .
-EXPOSE 3000
+EXPOSE 7823
 CMD ["node", "server.js"]

@@ -24,12 +24,12 @@ docker compose up -d
 node server.js
 ```
 
-The server runs on port `3000` by default. Set the `PORT` environment variable to override.
+The server runs on port `7823` by default (an uncommon port chosen to avoid conflicts). Set the `PORT` environment variable to override.
 
 | URL | Purpose |
 |-----|---------|
-| `http://host:3000/` | Viewer — display only |
-| `http://host:3000/operator` | Operator — timer controls |
+| `http://host:7823/` | Viewer — display only |
+| `http://host:7823/operator` | Operator — timer controls |
 
 ## How it works
 

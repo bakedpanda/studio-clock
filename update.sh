@@ -10,5 +10,5 @@ docker-compose up -d --build --force-recreate
 IP=$(hostname -I | awk '{print $1}')
 echo ""
 echo "Done."
-echo "  Viewer   http://$IP:3000/"
-echo "  Operator http://$IP:3000/operator"
+echo "  Viewer   http://$IP:7823/"
+echo "  Operator http://$IP:7823/operator"

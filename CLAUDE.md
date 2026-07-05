@@ -12,12 +12,12 @@ The entire app is two files: `server.js` (Node, no dependencies) and `studio-clo
 
 There is no package.json, no npm install, no test suite, no linter, and no build step — this is intentional (see README: "No dependencies — pure Node.js").
 
-- Run locally: `node server.js` (serves on port 3000; override with `PORT=xxxx node server.js`)
-- Run via Docker: `docker compose up -d` (maps host port 7823 → container 3000, see `docker-compose.yml`)
+- Run locally: `node server.js` (serves on port 7823 by default — chosen to avoid conflicts; override with `PORT=xxxx node server.js`)
+- Run via Docker: `docker compose up -d` (maps host port 7823 → container 7823, see `docker-compose.yml`)
 - Rebuild/redeploy on a host already running it: `./update.sh` (forces `docker-compose up -d --build --force-recreate`)
 - First-time deploy: `./deploy.sh`
 
-Manual verification after changes (no automated tests exist): start the server, open `http://localhost:3000/operator` in one tab and `http://localhost:3000/` in another, and confirm timer/stopwatch/message/settings changes on the operator propagate to the viewer live.
+Manual verification after changes (no automated tests exist): start the server, open `http://localhost:7823/operator` in one tab and `http://localhost:7823/` in another, and confirm timer/stopwatch/message/settings changes on the operator propagate to the viewer live.
 
 ## Architecture
 
