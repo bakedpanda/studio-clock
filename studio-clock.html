@@ -11,14 +11,12 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-color:        #0a0a0a;
-  --clock-color:     #00e676;
-  --text-color:      #ffffff;
-  --clock-size:      min(min(92vw, 92vh), 480px);
-  --timer-color:     #ffd600;
-  --stopwatch-color: #4fc3f7;
-  --target-color:    #ffffff;
-  --message-color:   #ffffff;
+  --bg-color:      #0a0a0a;
+  --clock-color:   #00e676;
+  --text-color:    #ffffff;
+  --clock-size:    min(min(92vw, 92vh), 480px);
+  --slot-color:    #ffd600;
+  --message-color: #ffffff;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -218,22 +216,15 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   max-width: 96vw;
 }
 
-/* Timer color states */
-.timer-idle    { color: #444; }
-.timer-running { color: var(--timer-color); }
-.timer-warn2   { color: #ff6d00; }
-.timer-warning { color: #ff1744; }
-.timer-paused  { color: #888; }
-.timer-expired { color: #ff1744; animation: pulse 0.9s ease-in-out infinite; }
-
-/* Stopwatch colors */
-.sw-idle    { color: #444; }
-.sw-running { color: var(--stopwatch-color); }
-.sw-paused  { color: #888; }
-
-/* Target time colors */
-.target-pending { color: var(--target-color); }
-.target-elapsed { color: color-mix(in srgb, var(--target-color) 40%, #000); }
+/* Slot state colors — shared by timer / stopwatch / target-time slots */
+.slot-idle    { color: #444; }
+.slot-running { color: var(--slot-color); }
+.slot-warn2   { color: #ff6d00; }
+.slot-warning { color: #ff1744; }
+.slot-paused  { color: #888; }
+.slot-expired { color: #ff1744; animation: pulse 0.9s ease-in-out infinite; }
+.slot-pending { color: var(--slot-color); }
+.slot-elapsed { color: color-mix(in srgb, var(--slot-color) 40%, #000); }
 
 /* Message color */
 .vw-message-text { color: var(--message-color); }
@@ -353,6 +344,13 @@ body.clock-digital .time-display { font-size: clamp(40px, min(15vw, 23vh), 280px
   flex-shrink: 0;
 }
 .widget-color:hover { border-color: #555; }
+
+.slot-type-select {
+  background: #181818; border: 1px solid #242424; border-radius: 4px;
+  color: #bbb; font-family: 'Roboto Mono', monospace; font-size: 11px;
+  padding: 5px 7px; color-scheme: dark; cursor: pointer;
+}
+.slot-type-select:focus { outline: none; border-color: #444; }
 
 .op-card-body {
   padding: 12px 14px;
@@ -833,105 +831,253 @@ body.custom-layout .vw-message-text {
     <div style="grid-column:1/-1;background:#1a1a1a;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
       <span style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">On Display</span>
       <label class="sw-toggle"><input type="checkbox" id="showClock" onchange="setShow('clock', this.checked)" checked><span class="sw-track"></span><span class="sw-label">Clock</span></label>
-      <label class="sw-toggle"><input type="checkbox" id="showTimer" onchange="setShow('timer', this.checked)"><span class="sw-track"></span><span class="sw-label">Timer</span></label>
-      <label class="sw-toggle"><input type="checkbox" id="showStopwatch" onchange="setShow('stopwatch', this.checked)"><span class="sw-track"></span><span class="sw-label">Stopwatch</span></label>
-      <label class="sw-toggle"><input type="checkbox" id="showTargetTime" onchange="setShow('targetTime', this.checked)"><span class="sw-track"></span><span class="sw-label">Target Time</span></label>
+      <label class="sw-toggle"><input type="checkbox" id="showSlot1" onchange="setShow('slot1', this.checked)"><span class="sw-track"></span><span class="sw-label">Slot 1</span></label>
+      <label class="sw-toggle"><input type="checkbox" id="showSlot2" onchange="setShow('slot2', this.checked)"><span class="sw-track"></span><span class="sw-label">Slot 2</span></label>
+      <label class="sw-toggle"><input type="checkbox" id="showSlot3" onchange="setShow('slot3', this.checked)"><span class="sw-track"></span><span class="sw-label">Slot 3</span></label>
     </div>
 
-    <!-- Countdown Timer -->
+    <!-- Slot 1 -->
     <div class="op-card">
       <div class="op-card-header">
-        <span class="op-card-title">Countdown Timer</span>
-        <input type="color" class="widget-color" id="timerColorPick" value="#ffd600" title="Timer colour" oninput="onWidgetColorChange('timer',this.value)">
+        <span class="op-card-title">Slot 1</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select class="slot-type-select" id="slot1-type" onchange="onSlotTypeChange('slot1')">
+            <option value="timer">Timer</option>
+            <option value="stopwatch">Stopwatch</option>
+            <option value="targetTime">Target Time</option>
+          </select>
+          <input type="color" class="widget-color" id="slot1-colorPick" value="#ffd600" title="Slot colour" oninput="onSlotColorChange('slot1',this.value)">
+        </div>
       </div>
       <div class="op-card-body">
-        <div class="op-display timer-idle" id="opTimerDisplay">00:00</div>
+        <div class="op-display slot-idle" id="slot1-display">00:00</div>
         <div class="op-input-row">
           <label>Label</label>
-          <input type="text" class="op-input full" id="timerLabel" placeholder="Label…" maxlength="60"
-            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
+          <input type="text" class="op-input full" id="slot1-label" placeholder="Label…" maxlength="60"
+            onblur="slotConfig('slot1')" onkeydown="if(event.key==='Enter')slotConfig('slot1')">
         </div>
-        <div class="op-input-row">
-          <label>Duration</label>
-          <input type="number" class="op-input" id="timerMins" value="5" min="0" max="99">
-          <span>min</span>
-          <input type="number" class="op-input" id="timerSecs" value="0" min="0" max="59">
-          <span>sec</span>
+
+        <div class="slot-fields-timer" id="slot1-timerFields">
+          <div class="op-input-row">
+            <label>Duration</label>
+            <input type="number" class="op-input" id="slot1-mins" value="5" min="0" max="99">
+            <span>min</span>
+            <input type="number" class="op-input" id="slot1-secs" value="0" min="0" max="59">
+            <span>sec</span>
+          </div>
+          <div class="op-input-row">
+            <label class="sw-toggle" style="min-width:unset;gap:5px;">
+              <input type="checkbox" id="slot1-warn2AtEnabled" checked onchange="slotConfig('slot1')">
+              <span class="sw-track"></span>
+            </label>
+            <input type="number" class="op-input" id="slot1-warn2At" value="5" min="0" max="99"
+              onblur="slotConfig('slot1')" onkeydown="if(event.key==='Enter')slotConfig('slot1')">
+            <span>min</span>
+            <span style="color:#ff6d00;font-size:16px;line-height:1;">●</span>
+          </div>
+          <div class="op-input-row">
+            <label class="sw-toggle" style="min-width:unset;gap:5px;">
+              <input type="checkbox" id="slot1-warnAtEnabled" checked onchange="slotConfig('slot1')">
+              <span class="sw-track"></span>
+            </label>
+            <input type="number" class="op-input" id="slot1-warnAt" value="1" min="0" max="99"
+              onblur="slotConfig('slot1')" onkeydown="if(event.key==='Enter')slotConfig('slot1')">
+            <span>min</span>
+            <span style="color:#ff1744;font-size:16px;line-height:1;">●</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="slot1-startBtn"  onclick="slotStart('slot1')">Start</button>
+            <button class="btn amber"   id="slot1-pauseBtn"  onclick="slotPause('slot1')"  style="display:none">Pause</button>
+            <button class="btn primary" id="slot1-resumeBtn" onclick="slotResume('slot1')" style="display:none">Resume</button>
+            <button class="btn danger"  id="slot1-resetBtn"  onclick="slotReset('slot1')"  style="display:none">Reset</button>
+          </div>
         </div>
-        <div class="op-input-row">
-          <label class="sw-toggle" style="min-width:unset;gap:5px;">
-            <input type="checkbox" id="timerWarn2AtEnabled" checked onchange="updateTimerConfig()">
-            <span class="sw-track"></span>
-          </label>
-          <input type="number" class="op-input" id="timerWarn2At" value="5" min="0" max="99"
-            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
-          <span>min</span>
-          <span style="color:#ff6d00;font-size:16px;line-height:1;">●</span>
+
+        <div class="slot-fields-stopwatch" id="slot1-swFields" style="display:none">
+          <div class="btn-row">
+            <button class="btn primary" id="slot1-swStartBtn"  onclick="slotStart('slot1')">Start</button>
+            <button class="btn amber"   id="slot1-swPauseBtn"  onclick="slotPause('slot1')"  style="display:none">Pause</button>
+            <button class="btn primary" id="slot1-swResumeBtn" onclick="slotResume('slot1')" style="display:none">Resume</button>
+            <button class="btn danger"  id="slot1-swResetBtn"  onclick="slotReset('slot1')"  style="display:none">Reset</button>
+          </div>
         </div>
-        <div class="op-input-row">
-          <label class="sw-toggle" style="min-width:unset;gap:5px;">
-            <input type="checkbox" id="timerWarnAtEnabled" checked onchange="updateTimerConfig()">
-            <span class="sw-track"></span>
-          </label>
-          <input type="number" class="op-input" id="timerWarnAt" value="1" min="0" max="99"
-            onblur="updateTimerConfig()" onkeydown="if(event.key==='Enter')updateTimerConfig()">
-          <span>min</span>
-          <span style="color:#ff1744;font-size:16px;line-height:1;">●</span>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" id="timerStartBtn"  onclick="timerStart()">Start</button>
-          <button class="btn amber"   id="timerPauseBtn"  onclick="timerPause()"  style="display:none">Pause</button>
-          <button class="btn primary" id="timerResumeBtn" onclick="timerResume()" style="display:none">Resume</button>
-          <button class="btn danger"  id="timerResetBtn"  onclick="timerReset()"  style="display:none">Reset</button>
+
+        <div class="slot-fields-target" id="slot1-targetFields" style="display:none">
+          <div class="op-input-row">
+            <label>Target</label>
+            <input type="time" class="op-input" id="slot1-target" onchange="slotConfig('slot1')">
+          </div>
+          <div class="op-input-row" style="margin-top:2px;">
+            <label class="sw-toggle" style="min-width:unset;">
+              <input type="checkbox" id="slot1-enabled" onchange="slotConfig('slot1')">
+              <span class="sw-track"></span>
+              <span class="sw-label">Active</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Target Time -->
+    <!-- Slot 2 -->
     <div class="op-card">
       <div class="op-card-header">
-        <span class="op-card-title">Target Time</span>
-        <input type="color" class="widget-color" id="targetColorPick" value="#ffffff" title="Target colour" oninput="onWidgetColorChange('target',this.value)">
+        <span class="op-card-title">Slot 2</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select class="slot-type-select" id="slot2-type" onchange="onSlotTypeChange('slot2')">
+            <option value="timer">Timer</option>
+            <option value="stopwatch" selected>Stopwatch</option>
+            <option value="targetTime">Target Time</option>
+          </select>
+          <input type="color" class="widget-color" id="slot2-colorPick" value="#4fc3f7" title="Slot colour" oninput="onSlotColorChange('slot2',this.value)">
+        </div>
       </div>
       <div class="op-card-body">
-        <div class="op-display target-pending" id="opTargetDisplay">--:--</div>
+        <div class="op-display slot-idle" id="slot2-display">00:00</div>
         <div class="op-input-row">
           <label>Label</label>
-          <input type="text" class="op-input full" id="targetLabel" placeholder="Label…" maxlength="60"
-            onblur="updateTargetTime()" onkeydown="if(event.key==='Enter')updateTargetTime()">
+          <input type="text" class="op-input full" id="slot2-label" placeholder="Label…" maxlength="60"
+            onblur="slotConfig('slot2')" onkeydown="if(event.key==='Enter')slotConfig('slot2')">
         </div>
-        <div class="op-input-row">
-          <label>Target</label>
-          <input type="time" class="op-input" id="targetInput" onchange="updateTargetTime()">
+
+        <div class="slot-fields-timer" id="slot2-timerFields" style="display:none">
+          <div class="op-input-row">
+            <label>Duration</label>
+            <input type="number" class="op-input" id="slot2-mins" value="5" min="0" max="99">
+            <span>min</span>
+            <input type="number" class="op-input" id="slot2-secs" value="0" min="0" max="59">
+            <span>sec</span>
+          </div>
+          <div class="op-input-row">
+            <label class="sw-toggle" style="min-width:unset;gap:5px;">
+              <input type="checkbox" id="slot2-warn2AtEnabled" checked onchange="slotConfig('slot2')">
+              <span class="sw-track"></span>
+            </label>
+            <input type="number" class="op-input" id="slot2-warn2At" value="5" min="0" max="99"
+              onblur="slotConfig('slot2')" onkeydown="if(event.key==='Enter')slotConfig('slot2')">
+            <span>min</span>
+            <span style="color:#ff6d00;font-size:16px;line-height:1;">●</span>
+          </div>
+          <div class="op-input-row">
+            <label class="sw-toggle" style="min-width:unset;gap:5px;">
+              <input type="checkbox" id="slot2-warnAtEnabled" checked onchange="slotConfig('slot2')">
+              <span class="sw-track"></span>
+            </label>
+            <input type="number" class="op-input" id="slot2-warnAt" value="1" min="0" max="99"
+              onblur="slotConfig('slot2')" onkeydown="if(event.key==='Enter')slotConfig('slot2')">
+            <span>min</span>
+            <span style="color:#ff1744;font-size:16px;line-height:1;">●</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="slot2-startBtn"  onclick="slotStart('slot2')">Start</button>
+            <button class="btn amber"   id="slot2-pauseBtn"  onclick="slotPause('slot2')"  style="display:none">Pause</button>
+            <button class="btn primary" id="slot2-resumeBtn" onclick="slotResume('slot2')" style="display:none">Resume</button>
+            <button class="btn danger"  id="slot2-resetBtn"  onclick="slotReset('slot2')"  style="display:none">Reset</button>
+          </div>
         </div>
-        <div class="op-input-row" style="margin-top:2px;">
-          <label class="sw-toggle" style="min-width:unset;">
-            <input type="checkbox" id="targetEnabled" onchange="updateTargetTime()">
-            <span class="sw-track"></span>
-            <span class="sw-label">Active</span>
-          </label>
+
+        <div class="slot-fields-stopwatch" id="slot2-swFields">
+          <div class="btn-row">
+            <button class="btn primary" id="slot2-swStartBtn"  onclick="slotStart('slot2')">Start</button>
+            <button class="btn amber"   id="slot2-swPauseBtn"  onclick="slotPause('slot2')"  style="display:none">Pause</button>
+            <button class="btn primary" id="slot2-swResumeBtn" onclick="slotResume('slot2')" style="display:none">Resume</button>
+            <button class="btn danger"  id="slot2-swResetBtn"  onclick="slotReset('slot2')"  style="display:none">Reset</button>
+          </div>
+        </div>
+
+        <div class="slot-fields-target" id="slot2-targetFields" style="display:none">
+          <div class="op-input-row">
+            <label>Target</label>
+            <input type="time" class="op-input" id="slot2-target" onchange="slotConfig('slot2')">
+          </div>
+          <div class="op-input-row" style="margin-top:2px;">
+            <label class="sw-toggle" style="min-width:unset;">
+              <input type="checkbox" id="slot2-enabled" onchange="slotConfig('slot2')">
+              <span class="sw-track"></span>
+              <span class="sw-label">Active</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Stopwatch -->
+    <!-- Slot 3 -->
     <div class="op-card">
       <div class="op-card-header">
-        <span class="op-card-title">Stopwatch</span>
-        <input type="color" class="widget-color" id="stopwatchColorPick" value="#4fc3f7" title="Stopwatch colour" oninput="onWidgetColorChange('stopwatch',this.value)">
+        <span class="op-card-title">Slot 3</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <select class="slot-type-select" id="slot3-type" onchange="onSlotTypeChange('slot3')">
+            <option value="timer">Timer</option>
+            <option value="stopwatch">Stopwatch</option>
+            <option value="targetTime" selected>Target Time</option>
+          </select>
+          <input type="color" class="widget-color" id="slot3-colorPick" value="#ffffff" title="Slot colour" oninput="onSlotColorChange('slot3',this.value)">
+        </div>
       </div>
       <div class="op-card-body">
-        <div class="op-display sw-idle" id="opSwDisplay">00:00</div>
+        <div class="op-display slot-pending" id="slot3-display">--:--</div>
         <div class="op-input-row">
           <label>Label</label>
-          <input type="text" class="op-input full" id="swLabel" placeholder="Label…" maxlength="60"
-            onblur="updateSwConfig()" onkeydown="if(event.key==='Enter')updateSwConfig()">
+          <input type="text" class="op-input full" id="slot3-label" placeholder="Label…" maxlength="60"
+            onblur="slotConfig('slot3')" onkeydown="if(event.key==='Enter')slotConfig('slot3')">
         </div>
-        <div class="btn-row">
-          <button class="btn primary" id="swStartBtn"  onclick="swStart()">Start</button>
-          <button class="btn amber"   id="swPauseBtn"  onclick="swPause()"  style="display:none">Pause</button>
-          <button class="btn primary" id="swResumeBtn" onclick="swResume()" style="display:none">Resume</button>
-          <button class="btn danger"  id="swResetBtn"  onclick="swReset()"  style="display:none">Reset</button>
+
+        <div class="slot-fields-timer" id="slot3-timerFields" style="display:none">
+          <div class="op-input-row">
+            <label>Duration</label>
+            <input type="number" class="op-input" id="slot3-mins" value="5" min="0" max="99">
+            <span>min</span>
+            <input type="number" class="op-input" id="slot3-secs" value="0" min="0" max="59">
+            <span>sec</span>
+          </div>
+          <div class="op-input-row">
+            <label class="sw-toggle" style="min-width:unset;gap:5px;">
+              <input type="checkbox" id="slot3-warn2AtEnabled" checked onchange="slotConfig('slot3')">
+              <span class="sw-track"></span>
+            </label>
+            <input type="number" class="op-input" id="slot3-warn2At" value="5" min="0" max="99"
+              onblur="slotConfig('slot3')" onkeydown="if(event.key==='Enter')slotConfig('slot3')">
+            <span>min</span>
+            <span style="color:#ff6d00;font-size:16px;line-height:1;">●</span>
+          </div>
+          <div class="op-input-row">
+            <label class="sw-toggle" style="min-width:unset;gap:5px;">
+              <input type="checkbox" id="slot3-warnAtEnabled" checked onchange="slotConfig('slot3')">
+              <span class="sw-track"></span>
+            </label>
+            <input type="number" class="op-input" id="slot3-warnAt" value="1" min="0" max="99"
+              onblur="slotConfig('slot3')" onkeydown="if(event.key==='Enter')slotConfig('slot3')">
+            <span>min</span>
+            <span style="color:#ff1744;font-size:16px;line-height:1;">●</span>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="slot3-startBtn"  onclick="slotStart('slot3')">Start</button>
+            <button class="btn amber"   id="slot3-pauseBtn"  onclick="slotPause('slot3')"  style="display:none">Pause</button>
+            <button class="btn primary" id="slot3-resumeBtn" onclick="slotResume('slot3')" style="display:none">Resume</button>
+            <button class="btn danger"  id="slot3-resetBtn"  onclick="slotReset('slot3')"  style="display:none">Reset</button>
+          </div>
+        </div>
+
+        <div class="slot-fields-stopwatch" id="slot3-swFields" style="display:none">
+          <div class="btn-row">
+            <button class="btn primary" id="slot3-swStartBtn"  onclick="slotStart('slot3')">Start</button>
+            <button class="btn amber"   id="slot3-swPauseBtn"  onclick="slotPause('slot3')"  style="display:none">Pause</button>
+            <button class="btn primary" id="slot3-swResumeBtn" onclick="slotResume('slot3')" style="display:none">Resume</button>
+            <button class="btn danger"  id="slot3-swResetBtn"  onclick="slotReset('slot3')"  style="display:none">Reset</button>
+          </div>
+        </div>
+
+        <div class="slot-fields-target" id="slot3-targetFields">
+          <div class="op-input-row">
+            <label>Target</label>
+            <input type="time" class="op-input" id="slot3-target" onchange="slotConfig('slot3')">
+          </div>
+          <div class="op-input-row" style="margin-top:2px;">
+            <label class="sw-toggle" style="min-width:unset;">
+              <input type="checkbox" id="slot3-enabled" onchange="slotConfig('slot3')">
+              <span class="sw-track"></span>
+              <span class="sw-label">Active</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -980,22 +1126,22 @@ body.custom-layout .vw-message-text {
           <span class="le-pos-val" id="le-pos-clock">50/44</span>
         </div>
         <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#ffd600">Timer</span>
-          <input type="range" class="le-scale-range" id="le-scale-timer" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('timer',this.value)">
-          <span class="le-scale-val" id="le-scaleval-timer">90%</span>
-          <span class="le-pos-val" id="le-pos-timer">20/76</span>
+          <span class="le-slider-name" id="le-slidername-slot1" style="color:#ffd600">Slot 1</span>
+          <input type="range" class="le-scale-range" id="le-scale-slot1" min="0.2" max="2.5" step="0.05" value="0.6" oninput="onScaleChange('slot1',this.value)">
+          <span class="le-scale-val" id="le-scaleval-slot1">60%</span>
+          <span class="le-pos-val" id="le-pos-slot1">49/41</span>
         </div>
         <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#4fc3f7">Stopwatch</span>
-          <input type="range" class="le-scale-range" id="le-scale-stopwatch" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('stopwatch',this.value)">
-          <span class="le-scale-val" id="le-scaleval-stopwatch">90%</span>
-          <span class="le-pos-val" id="le-pos-stopwatch">50/76</span>
+          <span class="le-slider-name" id="le-slidername-slot2" style="color:#4fc3f7">Slot 2</span>
+          <input type="range" class="le-scale-range" id="le-scale-slot2" min="0.2" max="2.5" step="0.05" value="0.6" oninput="onScaleChange('slot2',this.value)">
+          <span class="le-scale-val" id="le-scaleval-slot2">60%</span>
+          <span class="le-pos-val" id="le-pos-slot2">17/40</span>
         </div>
         <div class="le-slider-row">
-          <span class="le-slider-name" style="color:#ce93d8">Target</span>
-          <input type="range" class="le-scale-range" id="le-scale-targetTime" min="0.2" max="2.5" step="0.05" value="0.9" oninput="onScaleChange('targetTime',this.value)">
-          <span class="le-scale-val" id="le-scaleval-targetTime">90%</span>
-          <span class="le-pos-val" id="le-pos-targetTime">80/76</span>
+          <span class="le-slider-name" id="le-slidername-slot3" style="color:#ffffff">Slot 3</span>
+          <input type="range" class="le-scale-range" id="le-scale-slot3" min="0.2" max="2.5" step="0.05" value="0.6" oninput="onScaleChange('slot3',this.value)">
+          <span class="le-scale-val" id="le-scaleval-slot3">60%</span>
+          <span class="le-pos-val" id="le-pos-slot3">82/41</span>
         </div>
         <div class="le-slider-row">
           <span class="le-slider-name" style="color:#ff9800">Message</span>
@@ -1078,7 +1224,7 @@ body.custom-layout .vw-message-text {
           <div class="ds-row">
             <span class="ds-label">Message</span>
             <div class="color-group">
-              <input type="color" id="messageColorPick" value="#ffffff" oninput="onWidgetColorChange('message',this.value)">
+              <input type="color" id="messageColorPick" value="#ffffff" oninput="onMessageColorChange(this.value)">
               <input type="text" id="messageColorText" class="color-text" value="#ffffff"
                 onblur="onMessageColorText()" onkeydown="if(event.key==='Enter')onMessageColorText()">
             </div>
@@ -1119,16 +1265,16 @@ body.custom-layout .vw-message-text {
     </div>
   </div>
 
-  <div class="vw-el" id="vwTimer">
-    <div class="vw-el-value timer-idle" id="vwTimerValue">00:00</div>
+  <div class="vw-el" id="vw-slot1">
+    <div class="vw-el-value slot-idle" id="vw-slot1-value">00:00</div>
   </div>
 
-  <div class="vw-el" id="vwStopwatch">
-    <div class="vw-el-value sw-idle" id="vwSwValue">00:00</div>
+  <div class="vw-el" id="vw-slot2">
+    <div class="vw-el-value slot-idle" id="vw-slot2-value">00:00</div>
   </div>
 
-  <div class="vw-el" id="vwTarget">
-    <div class="vw-el-value target-pending" id="vwTargetValue">--:--</div>
+  <div class="vw-el" id="vw-slot3">
+    <div class="vw-el-value slot-pending" id="vw-slot3-value">--:--</div>
   </div>
 
   <div class="vw-el" id="vwMessage">
@@ -1148,12 +1294,14 @@ const isOperator = lastSegment === 'operator';
 document.body.classList.add(isOperator ? 'operator' : 'viewer');
 
 // ── Settings (viewer display preferences) ─────────────────────────────────
+const SLOT_IDS = ['slot1', 'slot2', 'slot3'];
+
 const DEFAULT_ELEMENT_POSITIONS = {
-  clock:      { x: 50, y: 16,  scale: 1.25 },
-  timer:      { x: 49, y: 41,  scale: 0.6  },
-  stopwatch:  { x: 17, y: 40,  scale: 0.6  },
-  targetTime: { x: 82, y: 41,  scale: 0.6  },
-  message:    { x: 50, y: 74,  scale: 1.0,  width: 88, height: 45 },
+  clock:   { x: 50, y: 16,  scale: 1.25 },
+  slot1:   { x: 49, y: 41,  scale: 0.6  },
+  slot2:   { x: 17, y: 40,  scale: 0.6  },
+  slot3:   { x: 82, y: 41,  scale: 0.6  },
+  message: { x: 50, y: 74,  scale: 1.0,  width: 88, height: 45 },
 };
 
 const DEFAULT_SETTINGS = {
@@ -1165,9 +1313,7 @@ const DEFAULT_SETTINGS = {
   viewerLayout:     'auto',
   clockStyle:       'digital',
   customLayout:     true,
-  timerColor:       '#ffd600',
-  stopwatchColor:   '#4fc3f7',
-  targetColor:      '#ffffff',
+  slotColors:       { slot1: '#ffd600', slot2: '#4fc3f7', slot3: '#ffffff' },
   messageColor:     '#ffffff',
   messageLineHeight: 1.1,
   elementPositions: JSON.parse(JSON.stringify(DEFAULT_ELEMENT_POSITIONS)),
@@ -1221,19 +1367,42 @@ function onColorTextChange(key) {
   else input.classList.add('invalid');
 }
 
+function applySlotColors() {
+  const colors = settings.slotColors || DEFAULT_SETTINGS.slotColors;
+  for (const id of SLOT_IDS) {
+    const hex = colors[id] || '#ffd600';
+    const vwEl = document.getElementById('vw-' + id);
+    const opEl = document.getElementById(id + '-display');
+    if (vwEl) vwEl.style.setProperty('--slot-color', hex);
+    if (opEl) opEl.style.setProperty('--slot-color', hex);
+    const picker = document.getElementById(id + '-colorPick');
+    if (picker) picker.value = hex;
+    const sliderName = document.getElementById('le-slidername-' + id);
+    if (sliderName) sliderName.style.color = hex;
+    const leEl = document.getElementById('le-el-' + id);
+    if (leEl) { leEl.style.borderColor = hex + '80'; leEl.style.background = hex + '0d'; }
+  }
+}
+
+function onSlotColorChange(id, value) {
+  if (!settings.slotColors) settings.slotColors = { ...DEFAULT_SETTINGS.slotColors };
+  settings.slotColors[id] = value;
+  applySlotColors();
+  pushSettingsToServer();
+}
+
 function applySettings(s) {
   settings = {
     ...DEFAULT_SETTINGS,
     ...s,
+    slotColors:       { ...DEFAULT_SETTINGS.slotColors, ...(s.slotColors || {}) },
     elementPositions: { ...DEFAULT_SETTINGS.elementPositions, ...(s.elementPositions || {}) },
   };
-  document.documentElement.style.setProperty('--bg-color',        settings.bgColor);
-  document.documentElement.style.setProperty('--clock-color',     settings.clockColor);
-  document.documentElement.style.setProperty('--text-color',      settings.textColor);
-  document.documentElement.style.setProperty('--timer-color',     settings.timerColor     || '#ffd600');
-  document.documentElement.style.setProperty('--stopwatch-color', settings.stopwatchColor || '#4fc3f7');
-  document.documentElement.style.setProperty('--target-color',    settings.targetColor    || '#ffffff');
-  document.documentElement.style.setProperty('--message-color',   settings.messageColor   || '#ffffff');
+  document.documentElement.style.setProperty('--bg-color',      settings.bgColor);
+  document.documentElement.style.setProperty('--clock-color',   settings.clockColor);
+  document.documentElement.style.setProperty('--text-color',    settings.textColor);
+  document.documentElement.style.setProperty('--message-color', settings.messageColor || '#ffffff');
+  applySlotColors();
 
   // Visual body classes only affect the viewer page
   if (!isOperator) {
@@ -1252,9 +1421,6 @@ function applySettings(s) {
   setColorPair('Bg',    settings.bgColor);
   setColorPair('Clock', settings.clockColor);
   setColorPair('Text',  settings.textColor);
-  const tcp = el('timerColorPick');     if (tcp) tcp.value = settings.timerColor     || '#ffd600';
-  const scp = el('stopwatchColorPick'); if (scp) scp.value = settings.stopwatchColor || '#4fc3f7';
-  const gcp = el('targetColorPick');    if (gcp) gcp.value = settings.targetColor    || '#ffffff';
   const mcp = el('messageColorPick');   if (mcp) mcp.value = settings.messageColor   || '#ffffff';
   const mct = el('messageColorText');   if (mct) mct.value = settings.messageColor   || '#ffffff';
 
@@ -1290,17 +1456,13 @@ function onMessageColorText() {
   let val = input.value.trim();
   if (/^[0-9a-fA-F]{3,6}$/.test(val)) { val = '#' + val; input.value = val; }
   const hex = cssColorToHex(val);
-  if (hex) { document.getElementById('messageColorPick').value = hex; onWidgetColorChange('message', hex); input.classList.remove('invalid'); }
+  if (hex) { document.getElementById('messageColorPick').value = hex; onMessageColorChange(hex); input.classList.remove('invalid'); }
   else input.classList.add('invalid');
 }
 
-function onWidgetColorChange(key, value) {
-  const fieldMap = { timer: 'timerColor', stopwatch: 'stopwatchColor', target: 'targetColor', message: 'messageColor' };
-  const cssMap   = { timer: '--timer-color', stopwatch: '--stopwatch-color', target: '--target-color', message: '--message-color' };
-  const field = fieldMap[key];
-  if (!field) return;
-  settings[field] = value;
-  document.documentElement.style.setProperty(cssMap[key], value);
+function onMessageColorChange(value) {
+  settings.messageColor = value;
+  document.documentElement.style.setProperty('--message-color', value);
   pushSettingsToServer();
 }
 
@@ -1343,7 +1505,7 @@ function updateNavLinks() {
 function applyCustomLayout() {
   document.body.classList.add('custom-layout');
   const pos = settings.elementPositions;
-  const map = { clock: 'vwClock', timer: 'vwTimer', stopwatch: 'vwStopwatch', targetTime: 'vwTarget', message: 'vwMessage' };
+  const map = { clock: 'vwClock', slot1: 'vw-slot1', slot2: 'vw-slot2', slot3: 'vw-slot3', message: 'vwMessage' };
   for (const [key, id] of Object.entries(map)) {
     const el = document.getElementById(id);
     if (!el || !pos[key]) continue;
@@ -1434,12 +1596,18 @@ function onLineHeightChange(val) {
 
 // ── Layout editor ──────────────────────────────────────────────────────────
 const LE_ELEMENTS = {
-  clock:      { label: 'Clock',       color: '#00e676' },
-  timer:      { label: 'Timer',       color: '#ffd600' },
-  stopwatch:  { label: 'Stopwatch',   color: '#4fc3f7' },
-  targetTime: { label: 'Target Time', color: '#ce93d8' },
-  message:    { label: 'Message',     color: '#ff9800' },
+  clock:   { label: 'Clock',   color: '#00e676' },
+  slot1:   { label: 'Slot 1',  color: null },
+  slot2:   { label: 'Slot 2',  color: null },
+  slot3:   { label: 'Slot 3',  color: null },
+  message: { label: 'Message', color: '#ff9800' },
 };
+
+function leColor(key) {
+  const info = LE_ELEMENTS[key];
+  if (info.color) return info.color;
+  return (settings.slotColors && settings.slotColors[key]) || '#888';
+}
 
 let _leDrag = null;
 let _leStageBuilt = false;
@@ -1472,8 +1640,9 @@ function buildLeStage() {
     el.className = 'le-el';
     el.id = 'le-el-' + key;
     el.dataset.key = key;
-    el.style.borderColor = info.color + '80';
-    el.style.background  = info.color + '0d';
+    const color = leColor(key);
+    el.style.borderColor = color + '80';
+    el.style.background  = color + '0d';
     stage.appendChild(el);
     el.addEventListener('mousedown',  e => leStartDrag(e, key), { passive: false });
     el.addEventListener('touchstart', e => leStartDrag(e, key), { passive: false });
@@ -1596,9 +1765,8 @@ function lePreviewContent(key) {
       const isAnalog = settings.clockStyle === 'analog';
       return { text: isAnalog ? '◷' : (document.getElementById('timeDisplay')?.textContent || '00:00:00'), fs: isAnalog ? Math.min(stageW * 0.22, stageH * 0.38) : clockFs };
     }
-    case 'timer':      return { text: document.getElementById('vwTimerValue')?.textContent || '00:00',    fs: timerFs };
-    case 'stopwatch':  return { text: document.getElementById('vwSwValue')?.textContent    || '00:00',    fs: timerFs };
-    case 'targetTime': return { text: document.getElementById('vwTargetValue')?.textContent|| '--:--',    fs: timerFs };
+    case 'slot1': case 'slot2': case 'slot3':
+      return { text: document.getElementById('vw-' + key + '-value')?.textContent || '00:00', fs: timerFs };
     case 'message':
       return { text: _msgDraft || sseMessage.text || 'Message', fs: msgFs };
     default:           return { text: key, fs: timerFs };
@@ -1607,12 +1775,11 @@ function lePreviewContent(key) {
 
 function isElementOn(key) {
   switch (key) {
-    case 'clock':      return sseShow.clock !== false;
-    case 'timer':      return sseShow.timer;
-    case 'stopwatch':  return sseShow.stopwatch;
-    case 'targetTime': return sseShow.targetTime;
-    case 'message':    return sseShow.message && sseMessage && sseMessage.visible;
-    default:           return true;
+    case 'clock':   return sseShow.clock !== false;
+    case 'slot1': case 'slot2': case 'slot3':
+      return !!sseShow[key];
+    case 'message': return sseShow.message && sseMessage && sseMessage.visible;
+    default:        return true;
   }
 }
 
@@ -1627,6 +1794,7 @@ function updateLeStage() {
     el.style.top  = p.y + '%';
     const on = isElementOn(key);
     const { text, fs } = lePreviewContent(key);
+    const color = leColor(key);
     el.style.opacity = on ? '1' : '0.25';
     el.style.borderStyle = on ? 'dashed' : 'dotted';
     if (key === 'message') {
@@ -1647,7 +1815,7 @@ function updateLeStage() {
         let lo = 8, hi = 300, best = lo;
         while (lo <= hi) { const mid = Math.floor((lo + hi) / 2); probe.style.fontSize = mid + 'px'; if (probe.offsetHeight <= elH) { best = mid; lo = mid + 1; } else { hi = mid - 1; } }
         document.body.removeChild(probe);
-        span.style.cssText = `color:${on ? info.color : '#555'};font-size:${Math.max(8, Math.floor(best * (p.scale ?? 1)))}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;overflow-wrap:break-word;word-break:break-word;pointer-events:none;line-height:${lh};`;
+        span.style.cssText = `color:${on ? color : '#555'};font-size:${Math.max(8, Math.floor(best * (p.scale ?? 1)))}px;font-weight:700;white-space:pre-wrap;text-align:center;display:block;width:100%;overflow-wrap:break-word;word-break:break-word;pointer-events:none;line-height:${lh};`;
         span.textContent = text;
       });
       if (!span.textContent) span.textContent = text;
@@ -1655,7 +1823,7 @@ function updateLeStage() {
       el.style.transform = `translate(-50%, -50%) scale(${p.scale})`;
       el.style.width  = '';
       el.style.height = '';
-      el.innerHTML = `<span style="color:${on ? info.color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
+      el.innerHTML = `<span style="color:${on ? color : '#555'};font-size:${Math.round(fs)}px;font-weight:700;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;">${text}</span>`;
     }
   }
 }
@@ -1873,16 +2041,19 @@ setInterval(drawClock, 100);
 drawClock();
 
 // ── SSE state ─────────────────────────────────────────────────────────────
-let sseTimer      = { mode: 'idle', remaining: 0, label: '', warnAt: 60000 };
-let sseStopwatch  = { mode: 'idle', elapsed: 0, label: '' };
-let sseTargetTime = { target: '', label: '', enabled: false };
-let sseMessage    = { text: '', visible: false, flash: false, shownAt: null };
-let sseShow       = { clock: true, timer: false, stopwatch: false, targetTime: false, message: false };
-let _msgDraft     = '';  // operator draft text — not cleared by SSE
+const CLIENT_SLOT_TYPE_DEFAULT = { slot1: 'timer', slot2: 'stopwatch', slot3: 'targetTime' };
+let sseSlots = SLOT_IDS.map(id => ({
+  id, type: CLIENT_SLOT_TYPE_DEFAULT[id], label: '', mode: 'idle',
+  remaining: 0, warnAt: 60000, warnAtEnabled: true, warn2At: 300000, warn2AtEnabled: true,
+  elapsed: 0, target: '', enabled: false,
+}));
+let sseMessage = { text: '', visible: false, flash: false, shownAt: null };
+let sseShow    = { clock: true, slot1: false, slot2: false, slot3: false, message: false };
+let _msgDraft  = '';  // operator draft text — not cleared by SSE
 
-let timerRxAt   = 0, timerRxMs  = 0;
-let swRxAt      = 0, swRxMs     = 0;
-let flashTmo    = null;
+let slotRx   = {}; // id -> { at, ms } — receive timestamp cache for interpolation
+for (const id of SLOT_IDS) slotRx[id] = { at: 0, ms: 0 };
+let flashTmo = null;
 
 // ── Format helpers ─────────────────────────────────────────────────────────
 function p2(n) { return String(Math.abs(Math.floor(n))).padStart(2, '0'); }
@@ -1912,76 +2083,57 @@ function calcTargetMs(hhMM) {
   return diff;
 }
 
-function timerClass(mode, ms, t) {
-  if (mode === 'expired') return 'timer-expired';
-  if (mode === 'paused')  return 'timer-paused';
-  if (mode === 'running') {
-    if (t.warnAtEnabled  && ms <= t.warnAt)  return 'timer-warning';
-    if (t.warn2AtEnabled && ms <= t.warn2At) return 'timer-warn2';
-    return 'timer-running';
+// ── Slot rendering helpers (shared by timer / stopwatch / target-time) ─────
+function slotLiveMs(slot) {
+  if (slot.type === 'timer') {
+    const rx = slotRx[slot.id];
+    return slot.mode === 'running' ? Math.max(0, rx.ms - (Date.now() - rx.at)) : slot.remaining;
   }
-  return 'timer-idle';
+  if (slot.type === 'stopwatch') {
+    const rx = slotRx[slot.id];
+    return slot.mode === 'running' ? rx.ms + (Date.now() - rx.at) : slot.elapsed;
+  }
+  return calcTargetMs(slot.target); // targetTime — computed fresh, may be null
 }
 
-function swClass(mode) {
-  return mode === 'running' ? 'sw-running' : mode === 'paused' ? 'sw-paused' : 'sw-idle';
+function slotClass(slot, ms) {
+  if (slot.type === 'timer') {
+    if (slot.mode === 'expired') return 'slot-expired';
+    if (slot.mode === 'paused')  return 'slot-paused';
+    if (slot.mode === 'running') {
+      if (slot.warnAtEnabled  && ms <= slot.warnAt)  return 'slot-warning';
+      if (slot.warn2AtEnabled && ms <= slot.warn2At) return 'slot-warn2';
+      return 'slot-running';
+    }
+    return 'slot-idle';
+  }
+  if (slot.type === 'stopwatch') {
+    return slot.mode === 'running' ? 'slot-running' : slot.mode === 'paused' ? 'slot-paused' : 'slot-idle';
+  }
+  // targetTime
+  if (!slot.enabled || !slot.target || ms === null) return 'slot-pending';
+  return ms >= 0 ? 'slot-pending' : 'slot-elapsed';
+}
+
+function slotDisplayText(slot, ms) {
+  if (slot.type === 'timer')     return fmtMsCeil(ms);
+  if (slot.type === 'stopwatch') return fmtMsFloor(ms);
+  // targetTime
+  if (!slot.enabled || !slot.target) return slot.target || '--:--';
+  if (ms === null) return '--:--';
+  return ms >= 0 ? fmtMsCeil(ms) : '+' + fmtMsFloor(-ms);
 }
 
 // ── Render loop ────────────────────────────────────────────────────────────
 function renderWidgets() {
-  const timerMs = sseTimer.mode === 'running'
-    ? Math.max(0, timerRxMs - (Date.now() - timerRxAt))
-    : sseTimer.remaining;
-
-  const swMs = sseStopwatch.mode === 'running'
-    ? swRxMs + (Date.now() - swRxAt)
-    : sseStopwatch.elapsed;
-
-  const tCls = timerClass(sseTimer.mode, timerMs, sseTimer);
-  const sCls = swClass(sseStopwatch.mode);
-
-  // Viewer widgets
-  const vwTV = document.getElementById('vwTimerValue');
-  const vwSV = document.getElementById('vwSwValue');
-  const vwTG = document.getElementById('vwTargetValue');
-
-  if (vwTV) { vwTV.textContent = fmtMsCeil(timerMs); vwTV.className = 'vw-el-value ' + tCls; }
-  if (vwSV) { vwSV.textContent = fmtMsFloor(swMs);   vwSV.className = 'vw-el-value ' + sCls; }
-
-  if (vwTG) {
-    if (sseTargetTime.enabled && sseTargetTime.target) {
-      const diff = calcTargetMs(sseTargetTime.target);
-      if (diff === null) { vwTG.textContent = '--:--'; vwTG.className = 'vw-el-value target-pending'; }
-      else if (diff >= 0) { vwTG.textContent = fmtMsCeil(diff); vwTG.className = 'vw-el-value target-pending'; }
-      else { vwTG.textContent = '+' + fmtMsFloor(-diff); vwTG.className = 'vw-el-value target-elapsed'; }
-    } else {
-      vwTG.textContent = sseTargetTime.target || '--:--';
-      vwTG.className = 'vw-el-value target-pending';
-    }
-  }
-
-  // Operator displays
-  const opTD = document.getElementById('opTimerDisplay');
-  const opSD = document.getElementById('opSwDisplay');
-  const opTG = document.getElementById('opTargetDisplay');
-
-  if (opTD) { opTD.textContent = fmtMsCeil(timerMs); opTD.className = 'op-display ' + tCls; }
-  if (opSD) { opSD.textContent = fmtMsFloor(swMs);   opSD.className = 'op-display ' + sCls; }
-
-  if (opTG) {
-    if (sseTargetTime.target) {
-      if (!sseTargetTime.enabled) {
-        opTG.textContent = sseTargetTime.target;
-        opTG.className = 'op-display target-pending';
-      } else {
-        const diff = calcTargetMs(sseTargetTime.target);
-        if (diff === null) { opTG.textContent = '--:--'; opTG.className = 'op-display'; }
-        else if (diff >= 0) { opTG.textContent = fmtMsCeil(diff);       opTG.className = 'op-display target-pending'; }
-        else                { opTG.textContent = '+' + fmtMsFloor(-diff); opTG.className = 'op-display target-elapsed'; }
-      }
-    } else {
-      opTG.textContent = '--:--'; opTG.className = 'op-display target-pending';
-    }
+  for (const slot of sseSlots) {
+    const ms   = slotLiveMs(slot);
+    const cls  = slotClass(slot, ms);
+    const text = slotDisplayText(slot, ms);
+    const vwEl = document.getElementById('vw-' + slot.id + '-value');
+    const opEl = document.getElementById(slot.id + '-display');
+    if (vwEl) { vwEl.textContent = text; vwEl.className = 'vw-el-value ' + cls; }
+    if (opEl) { opEl.textContent = text; opEl.className = 'op-display ' + cls; }
   }
 
   const msgTimeEl = document.getElementById('msgLiveTime');
@@ -1995,36 +2147,32 @@ setInterval(renderWidgets, 100);
 function setEl(id, val) { const e = document.getElementById(id); if (e && document.activeElement !== e) e.value = val; }
 function setChk(id, val) { const e = document.getElementById(id); if (e) e.checked = val; }
 
+function updateSlotFieldVisibility(id, type) {
+  const tf = document.getElementById(id + '-timerFields');
+  const sf = document.getElementById(id + '-swFields');
+  const gf = document.getElementById(id + '-targetFields');
+  if (tf) tf.style.display = type === 'timer'      ? '' : 'none';
+  if (sf) sf.style.display = type === 'stopwatch'  ? '' : 'none';
+  if (gf) gf.style.display = type === 'targetTime' ? '' : 'none';
+}
+
 function applySSEState(state) {
-  if (state.timer) {
-    sseTimer  = state.timer;
-    timerRxAt = Date.now();
-    timerRxMs = state.timer.remaining;
-    updateTimerBtns(state.timer.mode);
-    setEl('timerLabel', state.timer.label || '');
-    setEl('timerWarnAt',  Math.round(state.timer.warnAt  / 60000));
-    setEl('timerWarn2At', Math.round(state.timer.warn2At / 60000));
-    setChk('timerWarnAtEnabled',  state.timer.warnAtEnabled  !== false);
-    setChk('timerWarn2AtEnabled', state.timer.warn2AtEnabled !== false);
-    const vwL = document.getElementById('vwTimerLabel');
-    if (vwL) vwL.textContent = state.timer.label || 'Timer';
-  }
-  if (state.stopwatch) {
-    sseStopwatch = state.stopwatch;
-    swRxAt = Date.now();
-    swRxMs = state.stopwatch.elapsed;
-    updateSwBtns(state.stopwatch.mode);
-    setEl('swLabel', state.stopwatch.label || '');
-    const vwL = document.getElementById('vwSwLabel');
-    if (vwL) vwL.textContent = state.stopwatch.label || 'Stopwatch';
-  }
-  if (state.targetTime) {
-    sseTargetTime = state.targetTime;
-    setEl('targetInput', state.targetTime.target || '');
-    setEl('targetLabel', state.targetTime.label || '');
-    setChk('targetEnabled', state.targetTime.enabled);
-    const vwL = document.getElementById('vwTargetLabel');
-    if (vwL) vwL.textContent = state.targetTime.label || 'Target Time';
+  if (state.slots) {
+    sseSlots = state.slots;
+    for (const slot of state.slots) {
+      slotRx[slot.id] = { at: Date.now(), ms: slot.type === 'stopwatch' ? slot.elapsed : slot.remaining };
+      updateSlotBtns(slot.id, slot.type, slot.mode);
+      updateSlotFieldVisibility(slot.id, slot.type);
+      const typeSel = document.getElementById(slot.id + '-type');
+      if (typeSel && document.activeElement !== typeSel) typeSel.value = slot.type;
+      setEl(slot.id + '-label', slot.label || '');
+      setEl(slot.id + '-warnAt',  Math.round(slot.warnAt  / 60000));
+      setEl(slot.id + '-warn2At', Math.round(slot.warn2At / 60000));
+      setChk(slot.id + '-warnAtEnabled',  slot.warnAtEnabled  !== false);
+      setChk(slot.id + '-warn2AtEnabled', slot.warn2AtEnabled !== false);
+      setEl(slot.id + '-target', slot.target || '');
+      setChk(slot.id + '-enabled', slot.enabled);
+    }
   }
   if (state.message) {
     sseMessage = state.message;
@@ -2045,16 +2193,12 @@ function applySSEState(state) {
   }
   if (state.show) {
     sseShow = state.show;
-    showWidget('vwClock',     state.show.clock !== false);
-    showWidget('vwTimer',     state.show.timer);
-    showWidget('vwStopwatch', state.show.stopwatch);
-    showWidget('vwTarget',    state.show.targetTime);
-    showWidget('vwMessage',   state.show.message && sseMessage && sseMessage.visible);
+    showWidget('vwClock', state.show.clock !== false);
+    for (const id of SLOT_IDS) showWidget('vw-' + id, state.show[id]);
+    showWidget('vwMessage', state.show.message && sseMessage && sseMessage.visible);
     if (state.show.message && sseMessage && sseMessage.visible) fitMessageToBox();
-    setChk('showClock',      state.show.clock !== false);
-    setChk('showTimer',      state.show.timer);
-    setChk('showStopwatch',  state.show.stopwatch);
-    setChk('showTargetTime', state.show.targetTime);
+    setChk('showClock', state.show.clock !== false);
+    for (const id of SLOT_IDS) setChk('show' + id[0].toUpperCase() + id.slice(1), state.show[id]);
     updateMsgLiveBanner();
   }
   if (state.displaySettings) {
@@ -2099,23 +2243,22 @@ function connectSSE() {
 }
 connectSSE();
 
-// ── Timer button states ────────────────────────────────────────────────────
-function updateTimerBtns(mode) {
-  const show = (id, on) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none'; };
-  show('timerStartBtn',  mode === 'idle' || mode === 'expired');
-  show('timerPauseBtn',  mode === 'running');
-  show('timerResumeBtn', mode === 'paused');
-  show('timerResetBtn',  mode !== 'idle');
-  const sb = document.getElementById('timerStartBtn');
-  if (sb) sb.textContent = mode === 'expired' ? 'Restart' : 'Start';
-}
-
-function updateSwBtns(mode) {
-  const show = (id, on) => { const e = document.getElementById(id); if (e) e.style.display = on ? '' : 'none'; };
-  show('swStartBtn',  mode === 'idle');
-  show('swPauseBtn',  mode === 'running');
-  show('swResumeBtn', mode === 'paused');
-  show('swResetBtn',  mode !== 'idle');
+// ── Slot button states ─────────────────────────────────────────────────────
+function updateSlotBtns(id, type, mode) {
+  const show = (elId, on) => { const e = document.getElementById(elId); if (e) e.style.display = on ? '' : 'none'; };
+  if (type === 'timer') {
+    show(id + '-startBtn',  mode === 'idle' || mode === 'expired');
+    show(id + '-pauseBtn',  mode === 'running');
+    show(id + '-resumeBtn', mode === 'paused');
+    show(id + '-resetBtn',  mode !== 'idle');
+    const sb = document.getElementById(id + '-startBtn');
+    if (sb) sb.textContent = mode === 'expired' ? 'Restart' : 'Start';
+  } else if (type === 'stopwatch') {
+    show(id + '-swStartBtn',  mode === 'idle');
+    show(id + '-swPauseBtn',  mode === 'running');
+    show(id + '-swResumeBtn', mode === 'paused');
+    show(id + '-swResetBtn',  mode !== 'idle');
+  }
 }
 
 // ── API helper ─────────────────────────────────────────────────────────────
@@ -2127,48 +2270,48 @@ function post(path, body) {
   }).catch(() => {});
 }
 
-// ── Timer commands ─────────────────────────────────────────────────────────
-function timerStart() {
-  const mins   = parseInt(document.getElementById('timerMins').value)   || 0;
-  const secs   = parseInt(document.getElementById('timerSecs').value)   || 0;
-  const label  = document.getElementById('timerLabel').value;
-  post('timer/start', { mins, secs, label, ...readTimerWarnConfig() });
-}
-function timerPause()  { post('timer/pause', {}); }
-function timerResume() { post('timer/resume', {}); }
-function timerReset() {
-  const mins = parseInt(document.getElementById('timerMins').value) || 0;
-  const secs = parseInt(document.getElementById('timerSecs').value) || 0;
-  post('timer/reset', { mins, secs });
-}
-function readTimerWarnConfig() {
+// ── Slot commands ───────────────────────────────────────────────────────────
+function readSlotWarnConfig(id) {
   return {
-    warnAt:         parseInt(document.getElementById('timerWarnAt')?.value)  || 0,
-    warnAtEnabled:  document.getElementById('timerWarnAtEnabled')?.checked   ?? true,
-    warn2At:        parseInt(document.getElementById('timerWarn2At')?.value) || 0,
-    warn2AtEnabled: document.getElementById('timerWarn2AtEnabled')?.checked  ?? true,
+    warnAt:         parseInt(document.getElementById(id + '-warnAt')?.value)  || 0,
+    warnAtEnabled:  document.getElementById(id + '-warnAtEnabled')?.checked   ?? true,
+    warn2At:        parseInt(document.getElementById(id + '-warn2At')?.value) || 0,
+    warn2AtEnabled: document.getElementById(id + '-warn2AtEnabled')?.checked  ?? true,
   };
 }
 
-function updateTimerConfig() {
-  const label = document.getElementById('timerLabel').value;
-  post('timer/config', { label, ...readTimerWarnConfig() });
+function slotStart(id) {
+  const slot  = sseSlots.find(s => s.id === id) || {};
+  const label = document.getElementById(id + '-label').value;
+  if (slot.type === 'stopwatch') { post('slots/' + id + '/start', { label }); return; }
+  const mins = parseInt(document.getElementById(id + '-mins').value) || 0;
+  const secs = parseInt(document.getElementById(id + '-secs').value) || 0;
+  post('slots/' + id + '/start', { mins, secs, label, ...readSlotWarnConfig(id) });
+}
+function slotPause(id)  { post('slots/' + id + '/pause', {}); }
+function slotResume(id) { post('slots/' + id + '/resume', {}); }
+function slotReset(id) {
+  const mins = parseInt(document.getElementById(id + '-mins')?.value) || 0;
+  const secs = parseInt(document.getElementById(id + '-secs')?.value) || 0;
+  post('slots/' + id + '/reset', { mins, secs });
 }
 
-// ── Stopwatch commands ─────────────────────────────────────────────────────
-function swStart()  { post('stopwatch/start', { label: document.getElementById('swLabel').value }); }
-function swPause()  { post('stopwatch/pause', {}); }
-function swResume() { post('stopwatch/start', {}); }
-function swReset()  { post('stopwatch/reset', {}); }
-function updateSwConfig() { post('stopwatch/config', { label: document.getElementById('swLabel').value }); }
+function slotConfig(id) {
+  const slot  = sseSlots.find(s => s.id === id) || {};
+  const label = document.getElementById(id + '-label').value;
+  const body  = { label };
+  if (slot.type === 'timer') Object.assign(body, readSlotWarnConfig(id));
+  if (slot.type === 'targetTime') {
+    body.target  = document.getElementById(id + '-target').value;
+    body.enabled = document.getElementById(id + '-enabled').checked;
+  }
+  post('slots/' + id + '/config', body);
+}
 
-// ── Target time commands ───────────────────────────────────────────────────
-function updateTargetTime() {
-  post('target-time', {
-    target:  document.getElementById('targetInput').value,
-    label:   document.getElementById('targetLabel').value,
-    enabled: document.getElementById('targetEnabled').checked,
-  });
+function onSlotTypeChange(id) {
+  const type = document.getElementById(id + '-type').value;
+  updateSlotFieldVisibility(id, type);
+  post('slots/' + id + '/type', { type });
 }
 
 // ── Message commands ───────────────────────────────────────────────────────
@@ -2236,6 +2379,10 @@ if (!isOperator) {
 
 // Init operator-only sections on page load
 if (isOperator) {
+  for (const id of SLOT_IDS) {
+    const sel = document.getElementById(id + '-type');
+    if (sel) updateSlotFieldVisibility(id, sel.value);
+  }
   const chev = document.getElementById('layoutEditorChevron');
   if (chev) chev.style.transform = 'rotate(180deg)';
   buildLeStage();
@@ -2244,6 +2391,7 @@ if (isOperator) {
   _leRefreshInterval = setInterval(updateLeStage, 500);
   renderPresetsList();
 }
+applySlotColors();
 </script>
 </body>
 </html>

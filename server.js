@@ -58,29 +58,38 @@ setInterval(syncNTP, SYNC_INTERVAL_MS);
 // ── Application state ─────────────────────────────────────────────────────
 // All mutable state is in flat objects so snapshot() can spread them cleanly.
 
-const timer = {
-  mode: 'idle',          // idle | running | paused | expired
-  remaining: 0,          // ms remaining when not running
-  endAt: null,           // absolute ms target when running
-  label: '',
-  warnAt: 60000,         // ms — close-warn threshold (red)
-  warnAtEnabled: true,   // whether close-warn is active
-  warn2At: 300000,       // ms — early-warn threshold (orange)
-  warn2AtEnabled: true,  // whether early-warn is active
-};
+// Each slot is a generic widget that can act as a countdown timer, a stopwatch,
+// or a target-time display. Fields for the inactive types are simply unused —
+// this lets a slot remember its timer config even while set to stopwatch, etc.
+const SLOT_IDS      = ['slot1', 'slot2', 'slot3'];
+const SLOT_DEFAULTS = { slot1: 'timer', slot2: 'stopwatch', slot3: 'targetTime' };
 
-const stopwatch = {
-  mode: 'idle',     // idle | running | paused
-  startedAt: null,  // Date.now() when last started/resumed
-  elapsed: 0,       // ms accumulated before current run
+const slots = SLOT_IDS.map(id => ({
+  id,
+  type: SLOT_DEFAULTS[id],
   label: '',
-};
 
-const targetTime = {
-  target: '',       // HH:MM (24 h)
-  label: '',
+  // Shared run state (timer + stopwatch)
+  mode: 'idle',           // idle | running | paused | expired
+
+  // Timer fields
+  remaining:      0,      // ms remaining when not running
+  endAt:          null,   // absolute ms target when running
+  warnAt:         60000,  // ms — close-warn threshold (red)
+  warnAtEnabled:  true,
+  warn2At:        300000, // ms — early-warn threshold (orange)
+  warn2AtEnabled: true,
+
+  // Stopwatch fields
+  startedAt: null,        // Date.now() when last started/resumed
+  elapsed:   0,           // ms accumulated before current run
+
+  // Target-time fields
+  target:  '',            // HH:MM (24h)
   enabled: false,
-};
+}));
+
+function getSlot(id) { return slots.find(s => s.id === id); }
 
 const message = {
   text: '',
@@ -91,11 +100,11 @@ const message = {
 
 // Which widgets are shown on display pages (operator controls)
 const show = {
-  clock:      true,
-  timer:      false,
-  stopwatch:  false,
-  targetTime: false,
-  message:    false,
+  clock: true,
+  slot1: false,
+  slot2: false,
+  slot3: false,
+  message: false,
 };
 
 // Viewer display settings (broadcast to all viewers via SSE)
@@ -108,30 +117,32 @@ const displaySettings = {
   viewerLayout:     'auto',
   clockStyle:       'digital',
   customLayout:     true,
-  timerColor:       '#ffd600',
-  stopwatchColor:   '#4fc3f7',
-  targetColor:      '#ffffff',
+  slotColors: {
+    slot1: '#ffd600',
+    slot2: '#4fc3f7',
+    slot3: '#ffffff',
+  },
   messageColor:     '#ffffff',
   elementPositions: {
-    clock:      { x: 50, y: 21, scale: 1.5 },
-    timer:      { x: 16, y: 50, scale: 0.7 },
-    stopwatch:  { x: 50, y: 50, scale: 0.7 },
-    targetTime: { x: 84, y: 50, scale: 0.7 },
-    message:    { x: 50, y: 80, scale: 1.0, width: 100, height: 40 },
+    clock:   { x: 50, y: 21, scale: 1.5 },
+    slot1:   { x: 16, y: 50, scale: 0.7 },
+    slot2:   { x: 50, y: 50, scale: 0.7 },
+    slot3:   { x: 84, y: 50, scale: 0.7 },
+    message: { x: 50, y: 80, scale: 1.0, width: 100, height: 40 },
   },
 };
 
-let expiredTimeout = null;
-let flashTimeout   = null;
+const RESET_ELEMENT_POSITIONS = {
+  clock:   { x: 50, y: 44, scale: 1.0 },
+  slot1:   { x: 20, y: 76, scale: 0.9 },
+  slot2:   { x: 50, y: 76, scale: 0.9 },
+  slot3:   { x: 80, y: 76, scale: 0.9 },
+  message: { x: 50, y: 88, scale: 0.85 },
+};
+const RESET_SLOT_COLORS = { slot1: '#ffd600', slot2: '#4fc3f7', slot3: '#ffffff' };
 
-// ── Duration memory ───────────────────────────────────────────────────────
-const DURATION_TTL = 12 * 60 * 60 * 1000;
-let lastDuration = { mins: 0, secs: 0, savedAt: 0 };
-
-function savedDuration() {
-  if (!lastDuration.savedAt || Date.now() - lastDuration.savedAt > DURATION_TTL) return { mins: 0, secs: 0 };
-  return { mins: lastDuration.mins, secs: lastDuration.secs };
-}
+let flashTimeout = null;
+const expiredTimeouts = new Map(); // slot id -> Timeout
 
 // ── SSE broadcast ─────────────────────────────────────────────────────────
 let sseClients = [];
@@ -143,49 +154,48 @@ function broadcast(data) {
 
 function snapshot() {
   return {
-    timer: {
-      mode:           timer.mode,
-      remaining:      timer.mode === 'running' ? Math.max(0, timer.endAt - Date.now()) : timer.remaining,
-      label:          timer.label,
-      warnAt:         timer.warnAt,
-      warnAtEnabled:  timer.warnAtEnabled,
-      warn2At:        timer.warn2At,
-      warn2AtEnabled: timer.warn2AtEnabled,
-    },
-    stopwatch: {
-      mode:    stopwatch.mode,
-      elapsed: stopwatch.mode === 'running'
-        ? stopwatch.elapsed + (Date.now() - stopwatch.startedAt)
-        : stopwatch.elapsed,
-      label: stopwatch.label,
-    },
-    targetTime: { target: targetTime.target, label: targetTime.label, enabled: targetTime.enabled },
-    message:    { text: message.text, visible: message.visible, flash: message.flash, shownAt: message.shownAt },
-    show:       { clock: show.clock, timer: show.timer, stopwatch: show.stopwatch,
-                  targetTime: show.targetTime, message: show.message },
+    slots: slots.map(s => ({
+      id:             s.id,
+      type:           s.type,
+      label:          s.label,
+      mode:           s.mode,
+      remaining:      s.mode === 'running' && s.type === 'timer' ? Math.max(0, s.endAt - Date.now()) : s.remaining,
+      warnAt:         s.warnAt,
+      warnAtEnabled:  s.warnAtEnabled,
+      warn2At:        s.warn2At,
+      warn2AtEnabled: s.warn2AtEnabled,
+      elapsed:        s.mode === 'running' && s.type === 'stopwatch' ? s.elapsed + (Date.now() - s.startedAt) : s.elapsed,
+      target:         s.target,
+      enabled:        s.enabled,
+    })),
+    message: { text: message.text, visible: message.visible, flash: message.flash, shownAt: message.shownAt },
+    show:    { ...show },
     displaySettings: { ...displaySettings },
   };
 }
 
 // ── Timer expiry ──────────────────────────────────────────────────────────
 setInterval(() => {
-  if (timer.mode !== 'running') return;
-  if (Date.now() >= timer.endAt) {
-    timer.mode      = 'expired';
-    timer.remaining = 0;
-    timer.endAt     = null;
-    broadcast(snapshot());
-    expiredTimeout = setTimeout(() => {
-      timer.mode      = 'idle';
-      timer.remaining = 0;
-      expiredTimeout  = null;
+  for (const s of slots) {
+    if (s.type !== 'timer' || s.mode !== 'running') continue;
+    if (Date.now() >= s.endAt) {
+      s.mode      = 'expired';
+      s.remaining = 0;
+      s.endAt     = null;
       broadcast(snapshot());
-    }, 30000);
+      clearExpiredTimeout(s.id);
+      expiredTimeouts.set(s.id, setTimeout(() => {
+        s.mode      = 'idle';
+        s.remaining = 0;
+        expiredTimeouts.delete(s.id);
+        broadcast(snapshot());
+      }, 30000));
+    }
   }
 }, 250);
 
-function clearExpiredTimeout() {
-  if (expiredTimeout) { clearTimeout(expiredTimeout); expiredTimeout = null; }
+function clearExpiredTimeout(id) {
+  if (expiredTimeouts.has(id)) { clearTimeout(expiredTimeouts.get(id)); expiredTimeouts.delete(id); }
 }
 
 // ── Presets ───────────────────────────────────────────────────────────────
@@ -208,16 +218,69 @@ const STATE_FILE = path.join(__dirname, 'state.json');
 function loadState() {
   try {
     const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-    if (saved.displaySettings) Object.assign(displaySettings, saved.displaySettings);
-    if (saved.timerLabel          !== undefined) timer.label          = saved.timerLabel;
-    if (saved.timerWarnAt         !== undefined) timer.warnAt         = saved.timerWarnAt;
-    if (saved.timerWarnAtEnabled  !== undefined) timer.warnAtEnabled  = saved.timerWarnAtEnabled;
-    if (saved.timerWarn2At        !== undefined) timer.warn2At        = saved.timerWarn2At;
-    if (saved.timerWarn2AtEnabled !== undefined) timer.warn2AtEnabled = saved.timerWarn2AtEnabled;
-    if (saved.swLabel     !== undefined) stopwatch.label = saved.swLabel;
-    if (saved.targetTime)  Object.assign(targetTime, saved.targetTime);
-    if (saved.message)     Object.assign(message,    { text: saved.message.text || '', visible: false, flash: false });
-    if (saved.show)        Object.assign(show,        saved.show);
+
+    if (saved.displaySettings) {
+      const ds = saved.displaySettings;
+      Object.assign(displaySettings, ds);
+      // Legacy per-widget colors → slotColors
+      if (!ds.slotColors && (ds.timerColor || ds.stopwatchColor || ds.targetColor)) {
+        displaySettings.slotColors = {
+          slot1: ds.timerColor     || RESET_SLOT_COLORS.slot1,
+          slot2: ds.stopwatchColor || RESET_SLOT_COLORS.slot2,
+          slot3: ds.targetColor    || RESET_SLOT_COLORS.slot3,
+        };
+      }
+      // Legacy elementPositions keys → slot1/2/3
+      const ep = ds.elementPositions;
+      if (ep && (ep.timer || ep.stopwatch || ep.targetTime)) {
+        displaySettings.elementPositions = {
+          clock:   ep.clock   || displaySettings.elementPositions.clock,
+          slot1:   ep.timer      || displaySettings.elementPositions.slot1,
+          slot2:   ep.stopwatch  || displaySettings.elementPositions.slot2,
+          slot3:   ep.targetTime || displaySettings.elementPositions.slot3,
+          message: ep.message || displaySettings.elementPositions.message,
+        };
+      }
+      // Drop legacy keys so they don't linger in the persisted file
+      delete displaySettings.timerColor;
+      delete displaySettings.stopwatchColor;
+      delete displaySettings.targetColor;
+    }
+
+    if (saved.slots) {
+      // Current format
+      for (const s of saved.slots) {
+        const slot = getSlot(s.id);
+        if (slot) Object.assign(slot, s, { mode: 'idle', endAt: null, startedAt: null });
+      }
+    } else {
+      // Legacy format: single timer/stopwatch/targetTime → slot1/slot2/slot3
+      const t = getSlot('slot1'), sw = getSlot('slot2'), tt = getSlot('slot3');
+      if (saved.timerLabel          !== undefined) t.label          = saved.timerLabel;
+      if (saved.timerWarnAt         !== undefined) t.warnAt         = saved.timerWarnAt;
+      if (saved.timerWarnAtEnabled  !== undefined) t.warnAtEnabled  = saved.timerWarnAtEnabled;
+      if (saved.timerWarn2At        !== undefined) t.warn2At        = saved.timerWarn2At;
+      if (saved.timerWarn2AtEnabled !== undefined) t.warn2AtEnabled = saved.timerWarn2AtEnabled;
+      if (saved.swLabel !== undefined) sw.label = saved.swLabel;
+      if (saved.targetTime) { tt.target = saved.targetTime.target || ''; tt.label = saved.targetTime.label || ''; tt.enabled = !!saved.targetTime.enabled; }
+    }
+
+    if (saved.message) Object.assign(message, { text: saved.message.text || '', visible: false, flash: false });
+
+    if (saved.show) {
+      const sh = saved.show;
+      if ('slot1' in sh || 'slot2' in sh || 'slot3' in sh) {
+        Object.assign(show, sh);
+      } else {
+        // Legacy show keys
+        show.clock = sh.clock !== false;
+        if (sh.timer      !== undefined) show.slot1 = sh.timer;
+        if (sh.stopwatch  !== undefined) show.slot2 = sh.stopwatch;
+        if (sh.targetTime !== undefined) show.slot3 = sh.targetTime;
+        if (sh.message    !== undefined) show.message = sh.message;
+      }
+    }
+
     console.log('Loaded persistent state');
   } catch {}
 }
@@ -225,15 +288,14 @@ function loadState() {
 function saveState() {
   const data = {
     displaySettings: { ...displaySettings },
-    timerLabel:          timer.label,
-    timerWarnAt:         timer.warnAt,
-    timerWarnAtEnabled:  timer.warnAtEnabled,
-    timerWarn2At:        timer.warn2At,
-    timerWarn2AtEnabled: timer.warn2AtEnabled,
-    swLabel:     stopwatch.label,
-    targetTime:  { ...targetTime },
-    message:     { text: message.text },
-    show:        { ...show },
+    slots: slots.map(s => ({
+      id: s.id, type: s.type, label: s.label,
+      warnAt: s.warnAt, warnAtEnabled: s.warnAtEnabled,
+      warn2At: s.warn2At, warn2AtEnabled: s.warn2AtEnabled,
+      target: s.target, enabled: s.enabled,
+    })),
+    message: { text: message.text },
+    show:    { ...show },
   };
   fs.writeFile(STATE_FILE, JSON.stringify(data, null, 2), err => {
     if (err) console.warn('Could not save state.json:', err.message);
@@ -252,6 +314,74 @@ function noContent(res) { res.writeHead(204); res.end(); }
 function json(res, data) {
   res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(data));
+}
+
+// ── Slot action handlers ────────────────────────────────────────────────────
+function slotStart(slot, body) {
+  if (slot.type === 'timer') {
+    const mins     = Math.max(0, parseInt(body.mins) || 0);
+    const secs     = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
+    const duration = (mins * 60 + secs) * 1000;
+    if (duration <= 0) return;
+    clearExpiredTimeout(slot.id);
+    applyTimerConfig(slot, body);
+    slot.mode = 'running'; slot.remaining = duration; slot.endAt = Date.now() + duration;
+  } else if (slot.type === 'stopwatch') {
+    if (body.label !== undefined) slot.label = String(body.label).slice(0, 60);
+    if (slot.mode === 'idle' || slot.mode === 'paused') {
+      slot.startedAt = Date.now();
+      slot.mode      = 'running';
+    }
+  }
+}
+
+function slotPause(slot) {
+  if (slot.type === 'timer' && slot.mode === 'running') {
+    slot.remaining = Math.max(0, slot.endAt - Date.now());
+    slot.mode = 'paused'; slot.endAt = null;
+  } else if (slot.type === 'stopwatch' && slot.mode === 'running') {
+    slot.elapsed  += Date.now() - slot.startedAt;
+    slot.startedAt = null;
+    slot.mode      = 'paused';
+  }
+}
+
+function slotResume(slot) {
+  if (slot.type === 'timer' && slot.mode === 'paused') {
+    slot.endAt = Date.now() + slot.remaining;
+    slot.mode  = 'running';
+  } else if (slot.type === 'stopwatch' && (slot.mode === 'idle' || slot.mode === 'paused')) {
+    slot.startedAt = Date.now();
+    slot.mode      = 'running';
+  }
+}
+
+function slotReset(slot, body) {
+  clearExpiredTimeout(slot.id);
+  if (slot.type === 'timer') {
+    const mins = Math.max(0, parseInt(body.mins) || 0);
+    const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
+    slot.mode = 'idle'; slot.remaining = (mins * 60 + secs) * 1000; slot.endAt = null;
+  } else if (slot.type === 'stopwatch') {
+    slot.mode = 'idle'; slot.elapsed = 0; slot.startedAt = null;
+  }
+}
+
+function applyTimerConfig(slot, body) {
+  if (body.label          !== undefined) slot.label          = String(body.label).slice(0, 60);
+  if (body.warnAt         !== undefined) slot.warnAt         = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
+  if (body.warnAtEnabled  !== undefined) slot.warnAtEnabled  = !!body.warnAtEnabled;
+  if (body.warn2At        !== undefined) slot.warn2At        = Math.max(0, parseInt(body.warn2At) || 0) * 1000;
+  if (body.warn2AtEnabled !== undefined) slot.warn2AtEnabled = !!body.warn2AtEnabled;
+}
+
+function slotConfig(slot, body) {
+  if (body.label !== undefined) slot.label = String(body.label).slice(0, 60);
+  if (slot.type === 'timer') applyTimerConfig(slot, body);
+  if (slot.type === 'targetTime') {
+    if (body.target  !== undefined) slot.target  = String(body.target).slice(0, 5);
+    if (body.enabled !== undefined) slot.enabled = !!body.enabled;
+  }
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────
@@ -280,7 +410,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET'  && pathname === '/settings') return json(res, displaySettings);
   if (req.method === 'POST' && pathname === '/settings') {
     return parseBody(req, body => {
-      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','customLayout','timerColor','stopwatchColor','targetColor','messageColor','messageLineHeight','elementPositions'];
+      const keys = ['showSeconds','clockColor','bgColor','textColor','chromakey','viewerLayout','clockStyle','customLayout','slotColors','messageColor','messageLineHeight','elementPositions'];
       for (const k of keys) if (k in body) displaySettings[k] = body[k];
       saveState();
       broadcast(snapshot());
@@ -288,7 +418,12 @@ const server = http.createServer((req, res) => {
     });
   }
   if (req.method === 'POST' && pathname === '/settings/reset') {
-    Object.assign(displaySettings, { showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff', chromakey: false, viewerLayout: 'auto', clockStyle: 'digital', viewerFocus: 'clock', customLayout: false, timerColor: '#ffd600', stopwatchColor: '#4fc3f7', targetColor: '#ffffff', messageColor: '#ffffff', elementPositions: { clock: { x: 50, y: 44, scale: 1.0 }, timer: { x: 20, y: 76, scale: 0.9 }, stopwatch: { x: 50, y: 76, scale: 0.9 }, targetTime: { x: 80, y: 76, scale: 0.9 }, message: { x: 50, y: 88, scale: 0.85 } } });
+    Object.assign(displaySettings, {
+      showSeconds: true, clockColor: '#00e676', bgColor: '#0a0a0a', textColor: '#ffffff',
+      chromakey: false, viewerLayout: 'auto', clockStyle: 'digital', customLayout: false,
+      slotColors: { ...RESET_SLOT_COLORS }, messageColor: '#ffffff',
+      elementPositions: JSON.parse(JSON.stringify(RESET_ELEMENT_POSITIONS)),
+    });
     saveState();
     broadcast(snapshot());
     return noContent(res);
@@ -307,123 +442,26 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Timer duration memory
-  if (req.method === 'GET'  && pathname === '/timer/duration') return json(res, savedDuration());
-  if (req.method === 'POST' && pathname === '/timer/duration') {
+  // Slot control: /slots/:id/(type|start|pause|resume|reset|config)
+  const slotMatch = pathname.match(/^\/slots\/(slot[123])\/(type|start|pause|resume|reset|config)$/);
+  if (slotMatch && req.method === 'POST') {
+    const [, id, action] = slotMatch;
+    const slot = getSlot(id);
     return parseBody(req, body => {
-      const mins = Math.max(0, parseInt(body.mins) || 0);
-      const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
-      lastDuration = { mins, secs, savedAt: Date.now() };
-      noContent(res);
-    });
-  }
-
-  // Timer control
-  if (req.method === 'POST' && pathname === '/timer/start') {
-    return parseBody(req, body => {
-      const mins     = Math.max(0, parseInt(body.mins) || 0);
-      const secs     = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
-      const duration = (mins * 60 + secs) * 1000;
-      if (duration > 0) {
-        clearExpiredTimeout();
-        if (body.label          !== undefined) timer.label          = String(body.label).slice(0, 60);
-        if (body.warnAt         !== undefined) timer.warnAt         = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
-        if (body.warnAtEnabled  !== undefined) timer.warnAtEnabled  = !!body.warnAtEnabled;
-        if (body.warn2At        !== undefined) timer.warn2At        = Math.max(0, parseInt(body.warn2At) || 0) * 1000;
-        if (body.warn2AtEnabled !== undefined) timer.warn2AtEnabled = !!body.warn2AtEnabled;
-        timer.mode = 'running'; timer.remaining = duration; timer.endAt = Date.now() + duration;
-        broadcast(snapshot());
+      switch (action) {
+        case 'type':
+          if (['timer', 'stopwatch', 'targetTime'].includes(body.type)) {
+            clearExpiredTimeout(slot.id);
+            slot.type = body.type;
+            slot.mode = 'idle'; slot.endAt = null; slot.startedAt = null;
+          }
+          break;
+        case 'start':   slotStart(slot, body);  break;
+        case 'pause':   slotPause(slot);        break;
+        case 'resume':  slotResume(slot);       break;
+        case 'reset':   slotReset(slot, body);  break;
+        case 'config':  slotConfig(slot, body); break;
       }
-      noContent(res);
-    });
-  }
-
-  if (req.method === 'POST' && pathname === '/timer/pause') {
-    if (timer.mode === 'running') {
-      timer.remaining = Math.max(0, timer.endAt - Date.now());
-      timer.mode = 'paused'; timer.endAt = null;
-      broadcast(snapshot());
-    }
-    return noContent(res);
-  }
-
-  if (req.method === 'POST' && pathname === '/timer/resume') {
-    if (timer.mode === 'paused') {
-      timer.endAt = Date.now() + timer.remaining;
-      timer.mode  = 'running';
-      broadcast(snapshot());
-    }
-    return noContent(res);
-  }
-
-  if (req.method === 'POST' && pathname === '/timer/reset') {
-    return parseBody(req, body => {
-      const mins = Math.max(0, parseInt(body.mins) || 0);
-      const secs = Math.max(0, Math.min(59, parseInt(body.secs) || 0));
-      clearExpiredTimeout();
-      timer.mode = 'idle'; timer.remaining = (mins * 60 + secs) * 1000; timer.endAt = null;
-      broadcast(snapshot());
-      noContent(res);
-    });
-  }
-
-  if (req.method === 'POST' && pathname === '/timer/config') {
-    return parseBody(req, body => {
-      if (body.label          !== undefined) timer.label          = String(body.label).slice(0, 60);
-      if (body.warnAt         !== undefined) timer.warnAt         = Math.max(0, parseInt(body.warnAt) || 0) * 1000;
-      if (body.warnAtEnabled  !== undefined) timer.warnAtEnabled  = !!body.warnAtEnabled;
-      if (body.warn2At        !== undefined) timer.warn2At        = Math.max(0, parseInt(body.warn2At) || 0) * 1000;
-      if (body.warn2AtEnabled !== undefined) timer.warn2AtEnabled = !!body.warn2AtEnabled;
-      saveState();
-      broadcast(snapshot());
-      noContent(res);
-    });
-  }
-
-  // Stopwatch
-  if (req.method === 'POST' && pathname === '/stopwatch/start') {
-    return parseBody(req, body => {
-      if (body.label !== undefined) stopwatch.label = String(body.label).slice(0, 60);
-      if (stopwatch.mode === 'idle' || stopwatch.mode === 'paused') {
-        stopwatch.startedAt = Date.now();
-        stopwatch.mode      = 'running';
-        broadcast(snapshot());
-      }
-      noContent(res);
-    });
-  }
-
-  if (req.method === 'POST' && pathname === '/stopwatch/pause') {
-    if (stopwatch.mode === 'running') {
-      stopwatch.elapsed  += Date.now() - stopwatch.startedAt;
-      stopwatch.startedAt = null;
-      stopwatch.mode      = 'paused';
-      broadcast(snapshot());
-    }
-    return noContent(res);
-  }
-
-  if (req.method === 'POST' && pathname === '/stopwatch/reset') {
-    stopwatch.mode = 'idle'; stopwatch.elapsed = 0; stopwatch.startedAt = null;
-    broadcast(snapshot());
-    return noContent(res);
-  }
-
-  if (req.method === 'POST' && pathname === '/stopwatch/config') {
-    return parseBody(req, body => {
-      if (body.label !== undefined) stopwatch.label = String(body.label).slice(0, 60);
-      saveState();
-      broadcast(snapshot());
-      noContent(res);
-    });
-  }
-
-  // Target time
-  if (req.method === 'POST' && pathname === '/target-time') {
-    return parseBody(req, body => {
-      if (body.target  !== undefined) targetTime.target  = String(body.target).slice(0, 5);
-      if (body.label   !== undefined) targetTime.label   = String(body.label).slice(0, 60);
-      if (body.enabled !== undefined) targetTime.enabled = !!body.enabled;
       saveState();
       broadcast(snapshot());
       noContent(res);
@@ -458,7 +496,7 @@ const server = http.createServer((req, res) => {
   // Widget visibility (operator toggles)
   if (req.method === 'POST' && pathname === '/show') {
     return parseBody(req, body => {
-      for (const k of ['clock', 'timer', 'stopwatch', 'targetTime', 'message']) {
+      for (const k of ['clock', 'slot1', 'slot2', 'slot3', 'message']) {
         if (body[k] !== undefined) show[k] = !!body[k];
       }
       saveState();
