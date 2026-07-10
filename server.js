@@ -14,6 +14,12 @@ let ntpOffset = 0;
 let ntpSynced = false;
 function ntpNow() { return Date.now() + ntpOffset; }
 
+// ms until the next whole wall-clock second, so timers/stopwatches can be
+// kicked off exactly on a second boundary — same boundary the digital clock
+// ticks over on for every connected viewer — instead of at an arbitrary
+// mid-second offset determined by click timing.
+function msUntilNextSecond() { return (1000 - (ntpNow() % 1000)) % 1000; }
+
 function syncNTP() {
   const server = NTP_SERVERS[Math.floor(Math.random() * NTP_SERVERS.length)];
   const client = dgram.createSocket('udp4');
@@ -143,6 +149,11 @@ const RESET_SLOT_COLORS = { slot1: '#ffd600', slot2: '#4fc3f7', slot3: '#ffffff'
 
 let flashTimeout = null;
 const expiredTimeouts = new Map(); // slot id -> Timeout
+const pendingStartTimeouts = new Map(); // slot id -> Timeout, aligned start/resume awaiting the next second boundary
+
+function clearPendingStart(id) {
+  if (pendingStartTimeouts.has(id)) { clearTimeout(pendingStartTimeouts.get(id)); pendingStartTimeouts.delete(id); }
+}
 
 // ── SSE broadcast ─────────────────────────────────────────────────────────
 let sseClients = [];
@@ -448,18 +459,31 @@ const server = http.createServer((req, res) => {
     const [, id, action] = slotMatch;
     const slot = getSlot(id);
     return parseBody(req, body => {
+      if (action === 'start' || action === 'resume') {
+        // Align the actual start to the next whole second so the countdown/
+        // count-up ticks over in sync with the clock and other slots, rather
+        // than at whatever mid-second instant the button was clicked.
+        clearPendingStart(slot.id);
+        pendingStartTimeouts.set(slot.id, setTimeout(() => {
+          pendingStartTimeouts.delete(slot.id);
+          if (action === 'start') slotStart(slot, body); else slotResume(slot);
+          saveState();
+          broadcast(snapshot());
+        }, msUntilNextSecond()));
+        return noContent(res);
+      }
+
       switch (action) {
         case 'type':
+          clearPendingStart(slot.id);
           if (['timer', 'stopwatch', 'targetTime'].includes(body.type)) {
             clearExpiredTimeout(slot.id);
             slot.type = body.type;
             slot.mode = 'idle'; slot.endAt = null; slot.startedAt = null;
           }
           break;
-        case 'start':   slotStart(slot, body);  break;
-        case 'pause':   slotPause(slot);        break;
-        case 'resume':  slotResume(slot);       break;
-        case 'reset':   slotReset(slot, body);  break;
+        case 'pause':   clearPendingStart(slot.id); slotPause(slot);        break;
+        case 'reset':   clearPendingStart(slot.id); slotReset(slot, body);  break;
         case 'config':  slotConfig(slot, body); break;
       }
       saveState();
